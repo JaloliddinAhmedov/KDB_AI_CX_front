@@ -1,0 +1,36 @@
+{
+  "entities": {
+    "users": {
+      "title": "Users",
+      "description": "Registered platform users with role permissions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "department": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "email", "displayName", "role"]
+    },
+    "knowledgeItems": {
+      "title": "Knowledge Base Items",
+      "description": "Trained documents and crawled URLs for Gemini AI context",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sourceName": { "type": "string" },
+        "type": { "type": "string", "enum": ["Document", "URL"] },
+        "fileFormat": { "type": "string" },
+        "dateAdded": { "type": "string" },
+        "status": { "type": "string" },
+        "faqCount": { "type": "number" },
+        "summary": { "type": "string" },
+        "contentSnippet": { "type": "string" },
+        "faqs": { "type": "array" }
+      },
+      "required": ["id", "sourceName", "type"]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "KDB Bank Uzbekistan - AI-CX Platform",
+  "description": "KDB Bank Uzbekistan AI-Driven Customer Experience (AI-CX) Platform featuring Knowledge Base training, live Gemini banking assistant, transaction intelligence, and support operations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
