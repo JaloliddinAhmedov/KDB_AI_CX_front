@@ -19,7 +19,7 @@ export interface KnowledgeItem {
   id: string;
   sourceName: string;
   type: 'Document' | 'URL' | 'Raw Text';
-  fileFormat?: 'PDF' | 'CSV' | 'TXT' | 'LINK';
+  fileFormat?: 'PDF' | 'CSV' | 'TXT' | 'LINK' | 'JSON';
   dateAdded: string;
   status: KnowledgeStatus;
   faqCount?: number;

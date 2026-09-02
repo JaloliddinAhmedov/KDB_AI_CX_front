@@ -56,21 +56,44 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ knowledgeItems = [] })
 
     const contextParts: string[] = [];
 
-    knowledgeItems.forEach(item => {
-      let part = `=== SOURCE DOCUMENT: ${item.sourceName} (${item.type} - Format: ${item.fileFormat || 'TXT'}) ===\nSummary: ${item.summary || 'Banking document'}`;
+    knowledgeItems.forEach((item, index) => {
+      let part = `=== SOURCE DOCUMENT [${index + 1}]: ${item.sourceName} (Type: ${item.type}, Format: ${item.fileFormat || 'TXT'}) ===`;
+      if (item.summary) {
+        part += `\nSummary: ${item.summary}`;
+      }
       
-      if (item.contentSnippet) {
-        part += `\nDocument Content / Snippet:\n${item.contentSnippet}`;
+      if (item.contentSnippet && item.contentSnippet.trim()) {
+        const snippet = item.contentSnippet.trim();
+        if (snippet.startsWith('[') || snippet.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(snippet);
+            const list = Array.isArray(parsed) ? parsed : [parsed];
+            const cleanLines = list.map((obj, i) => {
+              const q = obj.questionUz || obj.question || obj.questionRu || obj.questionEn || '';
+              const a = obj.answerUz || obj.answer || obj.answerRu || obj.answerEn || '';
+              return q && a ? `${i + 1}. Q: ${q}\n   A: ${a}` : '';
+            }).filter(Boolean);
+            if (cleanLines.length > 0) {
+              part += `\nEXTRACTED Q&A PAIRS:\n${cleanLines.join('\n')}`;
+            } else {
+              part += `\nFULL DOCUMENT TEXT / SNIPPET:\n${snippet}`;
+            }
+          } catch {
+            part += `\nFULL DOCUMENT TEXT / SNIPPET:\n${snippet}`;
+          }
+        } else {
+          part += `\nFULL DOCUMENT TEXT / SNIPPET:\n${snippet}`;
+        }
       }
 
       if (item.faqs && item.faqs.length > 0) {
-        part += `\nExtracted Q&A Pairs:\n` + item.faqs.map((f, i) => `${i + 1}. Q: ${f.question}\n   A: ${f.answer}`).join('\n');
+        part += `\nEXTRACTED Q&A PAIRS:\n` + item.faqs.map((f, i) => `${i + 1}. Q: ${f.question}\n   A: ${f.answer}`).join('\n');
       }
 
       contextParts.push(part);
     });
 
-    return contextParts.join('\n\n--------------------\n\n');
+    return contextParts.join('\n\n========================================\n\n');
   };
 
   const handleSendMessage = async (textToSend?: string) => {
@@ -89,10 +112,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ knowledgeItems = [] })
     setIsLoading(true);
 
     try {
-      const historyPayload = messages.map(m => ({
-        role: m.sender === 'user' ? 'user' : 'assistant',
-        text: m.text
-      }));
+      const historyPayload = messages
+        .filter(m => m.id !== '1')
+        .map(m => ({
+          role: m.sender === 'user' ? 'user' : 'model',
+          text: m.text
+        }));
 
       const dynamicContext = buildKnowledgeContext();
 
@@ -110,12 +135,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ knowledgeItems = [] })
 
       const topSources = knowledgeItems.length > 0 
         ? knowledgeItems.slice(0, 3).map(k => k.sourceName)
-        : ['2024 Mortgage FAQs', 'Standard Savings Rates'];
+        : ['KDB Bank AI Knowledge Base', 'Official Tariffs & Guidelines'];
 
       const assistantMessage: ChatMessage = {
         id: `msg-ai-${Date.now()}`,
         sender: 'assistant',
-        text: data.text || 'I could not process that request. Please try again.',
+        text: data.text || data.error || 'KDB Bank O\'zbekiston: So\'rovingiz qabul qilindi.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         sources: topSources,
       };
@@ -128,7 +153,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ knowledgeItems = [] })
         {
           id: `msg-err-${Date.now()}`,
           sender: 'assistant',
-          text: 'Connections to KDB Bank Uzbekistan AI server are momentarily limited. Please check internet access or try again.',
+          text: 'KDB Bank O\'zbekiston AI assistenti bilan bog\'lanishda vaqtinchalik uzilish yuz berdi. Iltimos qayta urinib ko\'ring.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -160,15 +185,15 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ knowledgeItems = [] })
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-6">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg flex items-center justify-between">
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-4 sm:p-6 text-white shadow-lg flex items-center justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-400" />
-            <span className="text-xs font-semibold tracking-wider uppercase text-indigo-300">KDB Bank AI-CX Co-Pilot</span>
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
+            <span className="text-[10px] sm:text-xs font-semibold tracking-wider uppercase text-indigo-300">KDB Bank AI-CX Co-Pilot</span>
           </div>
-          <h1 className="text-xl font-bold">KDB Bank Uzbekistan AI-CX Assistant</h1>
+          <h1 className="text-lg sm:text-xl font-bold">KDB Bank Uzbekistan AI-CX Assistant</h1>
           <p className="text-xs text-slate-300 max-w-xl">
             Trained on real KDB Bank Uzbekistan Credit FAQs, Deposit Rates, and Banking Compliance documents. Supports English & Uzbek inquiries.
           </p>

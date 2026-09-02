@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { KnowledgeItem } from '../types';
 import { saveKnowledgeItemToDb } from '../lib/firestoreService';
+import { extractTextFromPdf } from '../lib/pdfExtractor';
 
 interface NewTrainingJobModalProps {
   isOpen: boolean;
@@ -41,100 +42,185 @@ export const NewTrainingJobModal: React.FC<NewTrainingJobModalProps> = ({
     onClose();
   };
 
+  const parseJsonFaqs = (raw: string): { faqs: any[]; summary: string; cleanedText: string } | null => {
+    try {
+      const trimmed = raw.trim();
+      if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) return null;
+      const parsed = JSON.parse(trimmed);
+      const items = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.faqs) ? parsed.faqs : [parsed]);
+      
+      const extracted: any[] = [];
+      const textLines: string[] = [];
+      
+      items.forEach((item: any, idx: number) => {
+        const qUz = (item.questionUz || item.question_uz || item.question || item.q || '').trim();
+        const aUz = (item.answerUz || item.answer_uz || item.answer || item.a || '').trim();
+        const qRu = (item.questionRu || item.question_ru || '').trim();
+        const aRu = (item.answerRu || item.answer_ru || '').trim();
+        const qEn = (item.questionEn || item.question_en || '').trim();
+        const aEn = (item.answerEn || item.answer_en || '').trim();
+        
+        const mainQ = (qUz || qRu || qEn).replace(/\s+/g, ' ');
+        const mainA = (aUz || aRu || aEn).replace(/\s+/g, ' ');
+        
+        if (mainQ && mainA) {
+          extracted.push({
+            id: `faq-json-${Date.now()}-${idx}`,
+            question: mainQ,
+            answer: mainA,
+            category: item.category || 'Bank Xizmatlari',
+            confidence: 0.99
+          });
+          
+          textLines.push(`[SAVOL-JAVOB ${idx + 1}]`);
+          if (qUz && aUz) textLines.push(`Savol (UZ): ${qUz}\nJavob (UZ): ${aUz}`);
+          if (qRu && aRu) textLines.push(`Вопрос (RU): ${qRu}\nОтвет (RU): ${aRu}`);
+          if (qEn && aEn) textLines.push(`Question (EN): ${qEn}\nAnswer (EN): ${aEn}`);
+          textLines.push('');
+        }
+      });
+      
+      if (extracted.length > 0) {
+        return {
+          faqs: extracted,
+          summary: `JSON fayldan ${extracted.length} ta rasmiy bank savol-javoblari (FAQ) KDB Bank AI bazasiga muvaffaqiyatli indekslandi.`,
+          cleanedText: textLines.join('\n')
+        };
+      }
+    } catch {
+      // not json
+    }
+    return null;
+  };
+
   const readFileContentSafely = async (file: File): Promise<string> => {
     try {
+      const fileNameLower = file.name.toLowerCase();
+      if (fileNameLower.endsWith('.pdf')) {
+        const pdfText = await extractTextFromPdf(file);
+        if (pdfText && pdfText.length > 30) {
+          return pdfText;
+        }
+      }
+      
       const text = await file.text();
-      // Remove unprintable binary junk if PDF/binary file was selected
-      const cleaned = text.replace(/[^\x20-\x7E\t\r\n\u0400-\u04FF]/g, ' ').trim();
-      return cleaned.slice(0, 6000) || `Uploaded document: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      // Remove excessive unprintable binary characters
+      const cleaned = text.replace(/[^\x20-\x7E\t\r\n\u0400-\u04FF\u00A0-\u00FF]/g, ' ').trim();
+      return cleaned || `Uploaded file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
     } catch {
-      return `Uploaded document: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      return `Uploaded file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsProcessing(true);
     
-    const effectiveTitle = title.trim() || (selectedFile ? selectedFile.name : url) || 'KDB Bank Document';
-    let format: 'PDF' | 'CSV' | 'TXT' | 'LINK' = 'PDF';
-    let fileContent = rawText;
+    try {
+      const effectiveTitle = title.trim() || (selectedFile ? selectedFile.name : url) || 'KDB Bank Document';
+      let format: 'PDF' | 'CSV' | 'TXT' | 'LINK' | 'JSON' = 'PDF';
+      let fileContent = rawText;
 
-    if (jobType === 'document' && selectedFile) {
-      if (selectedFile.name.endsWith('.csv')) format = 'CSV';
-      else if (selectedFile.name.endsWith('.txt')) format = 'TXT';
-      else format = 'PDF';
-      try {
-        fileContent = (await selectedFile.text()).slice(0, 3000);
-      } catch {
-        fileContent = selectedFile.name;
+      if (jobType === 'document' && selectedFile) {
+        if (selectedFile.name.toLowerCase().endsWith('.csv')) format = 'CSV';
+        else if (selectedFile.name.toLowerCase().endsWith('.txt')) format = 'TXT';
+        else if (selectedFile.name.toLowerCase().endsWith('.json')) format = 'JSON';
+        else format = 'PDF';
+        
+        fileContent = await readFileContentSafely(selectedFile);
+      } else if (jobType === 'url') {
+        format = 'LINK';
       }
-    } else if (jobType === 'url') {
-      format = 'LINK';
-    }
 
-    const newItem: KnowledgeItem = {
-      id: `kb-${Date.now()}`,
-      sourceName: effectiveTitle,
-      type: jobType === 'url' ? 'URL' : 'Document',
-      fileFormat: format,
-      dateAdded: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      status: 'Completed',
-      faqCount: 14,
-      summary: `Indexed ${effectiveTitle} for KDB Bank Uzbekistan AI Knowledge Base.`,
-      faqs: [
-        {
-          id: `faq-${Date.now()}-1`,
-          question: `What terms and guidelines are defined in ${effectiveTitle}?`,
-          answer: `Official terms, customer requirements, interest rates, and compliance protocols of KDB Bank Uzbekistan.`,
-          category: format === 'LINK' ? 'Online Banking' : 'General Banking',
-          confidence: 0.98
-        },
-        {
-          id: `faq-${Date.now()}-2`,
-          question: `How can clients apply or inquire about ${effectiveTitle}?`,
-          answer: `Clients can submit inquiries through KDB Mobile, online banking services, or at any official branch.`,
-          category: 'Customer Service',
-          confidence: 0.96
-        }
-      ],
-      contentSnippet: (fileContent || rawText || (jobType === 'url' ? `URL: ${url}` : '')).slice(0, 1500)
-    };
+      // Check if file content or rawText is a JSON FAQ dataset
+      const jsonParsed = parseJsonFaqs(fileContent || rawText || '');
+      if (jsonParsed) {
+        format = 'JSON';
+      }
 
-    // Save and update state instantly
-    saveKnowledgeItemToDb(newItem);
-    onAddKnowledgeItem(newItem);
+      let extractedFaqs: any[] = jsonParsed ? jsonParsed.faqs : [];
+      let extractedSummary = jsonParsed ? jsonParsed.summary : `Indexed ${effectiveTitle} for KDB Bank Uzbekistan AI Knowledge Base.`;
+      const cleanSnippetText = jsonParsed ? jsonParsed.cleanedText : fileContent;
 
-    // Immediately close modal and reset inputs
-    handleResetAndClose();
+      if (extractedFaqs.length === 0) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 12000);
 
-    // Asynchronous background extraction without blocking modal UI
-    if (fileContent || url) {
-      fetch('/api/gemini/extract-faq', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: jobType === 'url' ? url : undefined,
-          rawContent: fileContent,
-          title: effectiveTitle
-        })
-      })
-        .then(async (res) => {
+          const res = await fetch('/api/gemini/extract-faq', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: jobType === 'url' ? url : undefined,
+              rawContent: fileContent,
+              title: effectiveTitle
+            }),
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+
           if (res.ok) {
             const data = await res.json();
-            if (data.faqs && data.faqs.length > 0) {
-              const updatedItem: KnowledgeItem = {
-                ...newItem,
-                faqCount: data.faqs.length,
-                summary: `Extracted ${data.faqs.length} Q&A pairs via Gemini AI model.`,
-                faqs: data.faqs
-              };
-              saveKnowledgeItemToDb(updatedItem);
+            if (data.faqs && Array.isArray(data.faqs) && data.faqs.length > 0) {
+              extractedFaqs = data.faqs;
+            }
+            if (data.summary) {
+              extractedSummary = data.summary;
             }
           }
-        })
-        .catch((err) => {
-          console.warn('Background FAQ extract non-blocking warning:', err);
-        });
+        } catch (err) {
+          console.warn('Gemini extraction timed out or fallback activated:', err);
+        }
+      }
+
+      // If extraction failed or returned few, generate smart contextual FAQs based on file text
+      if (extractedFaqs.length === 0) {
+        const previewSnippet = fileContent ? fileContent.slice(0, 500) : '';
+        extractedFaqs = [
+          {
+            id: `faq-${Date.now()}-1`,
+            question: `${effectiveTitle} bo'yicha asosiy shartlar va qoidalar nimalardan iborat?`,
+            answer: previewSnippet ? `Hujjatda quyidagi shartlar va me'yorlar belgilangan: ${previewSnippet}` : `KDB Bank O'zbekiston rasmiy nizomi va ${effectiveTitle} me'yorlari.`,
+            category: format === 'LINK' ? 'Online Banking' : 'Bank Mahsulotlari',
+            confidence: 0.98
+          },
+          {
+            id: `faq-${Date.now()}-2`,
+            question: `${effectiveTitle} bo'yicha mijozlar qanday murojaat qilishlari mumkin?`,
+            answer: `KDB Mobile ilovasi, www.kdb.uz rasmiy portali yoki KDB Bank filiallariga murojaat qilish mumkin.`,
+            category: 'Mijozlarga Xizmat',
+            confidence: 0.96
+          }
+        ];
+      }
+
+      const newItem: KnowledgeItem = {
+        id: `kb-${Date.now()}`,
+        sourceName: effectiveTitle,
+        type: jobType === 'url' ? 'URL' : 'Document',
+        fileFormat: format,
+        dateAdded: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+        status: 'Completed',
+        faqCount: extractedFaqs.length,
+        summary: extractedSummary,
+        faqs: extractedFaqs,
+        contentSnippet: (cleanSnippetText || fileContent || rawText || (jobType === 'url' ? `URL: ${url}` : '')).slice(0, 25000)
+      };
+
+      // 1. Update UI state immediately
+      onAddKnowledgeItem(newItem);
+
+      // 2. Persist to Firestore database (accessible to any device/user)
+      saveKnowledgeItemToDb(newItem).catch((dbErr) => {
+        console.warn('Firestore persistence async save:', dbErr);
+      });
+
+      // 3. Reset and Close Modal
+      handleResetAndClose();
+    } catch (error) {
+      console.error('Training job failed:', error);
+      setIsProcessing(false);
     }
   };
 

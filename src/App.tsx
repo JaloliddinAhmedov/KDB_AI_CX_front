@@ -38,6 +38,8 @@ export default function App() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
 
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   // Firestore real-time subscriptions
   useEffect(() => {
     const unsubscribeKnowledge = subscribeKnowledgeItems((items) => {
@@ -99,13 +101,15 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900 font-sans">
-      {/* Left Sidebar */}
+      {/* Left Sidebar (Desktop + Mobile Drawer) */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenNewJobModal={() => setIsNewJobModalOpen(true)}
         currentUser={currentUser}
         onPermissionDenied={() => setIsPermissionModalOpen(true)}
+        isOpenMobile={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Content Workspace */}
@@ -117,10 +121,11 @@ export default function App() {
           currentUser={currentUser}
           onOpenProfileModal={() => setIsProfileModalOpen(true)}
           onSignOut={handleSignOut}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(prev => !prev)}
         />
 
         <main className="flex-1">
-          {activeTab === 'training' && (
+          <div className={activeTab === 'training' ? 'block' : 'hidden'}>
             <AITrainingCenter
               knowledgeItems={knowledgeItems}
               setKnowledgeItems={setKnowledgeItems}
@@ -129,33 +134,37 @@ export default function App() {
               currentUser={currentUser}
               onPermissionDenied={() => setIsPermissionModalOpen(true)}
             />
-          )}
+          </div>
 
-          {activeTab === 'assistant' && <AIAssistant knowledgeItems={knowledgeItems} />}
+          <div className={activeTab === 'assistant' ? 'block' : 'hidden'}>
+            <AIAssistant knowledgeItems={knowledgeItems} />
+          </div>
 
-          {activeTab === 'dashboard' && <DashboardView />}
+          <div className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
+            <DashboardView />
+          </div>
 
-          {activeTab === 'transactions' && (
+          <div className={activeTab === 'transactions' ? 'block' : 'hidden'}>
             <TransactionSearch
               transactions={transactions}
               setTransactions={setTransactions}
             />
-          )}
+          </div>
 
-          {activeTab === 'support' && (
+          <div className={activeTab === 'support' ? 'block' : 'hidden'}>
             <SupportView
               tickets={tickets}
               setTickets={setTickets}
             />
-          )}
+          </div>
 
-          {activeTab === 'users' && (
+          <div className={activeTab === 'users' ? 'block' : 'hidden'}>
             <UsersView
               users={users}
               currentUser={currentUser}
               setCurrentUser={setCurrentUser}
             />
-          )}
+          </div>
         </main>
       </div>
 

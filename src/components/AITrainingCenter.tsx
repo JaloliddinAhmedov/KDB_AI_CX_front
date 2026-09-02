@@ -192,12 +192,12 @@ export const AITrainingCenter: React.FC<AITrainingCenterProps> = ({
   const totalFaqs = knowledgeItems.reduce((acc, item) => acc + (item.faqCount || 100), 0);
 
   return (
-    <div className="p-8 space-y-8 bg-[#f8fafc] min-h-[calc(100vh-4rem)]">
+    <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 bg-[#f8fafc] min-h-[calc(100vh-4rem)]">
       {/* Title & Description */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">AI Knowledge Base & Training</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage and refine the intelligence of your banking assistant (Firestore Synced).</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">AI Knowledge Base & Training</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">Manage and refine the intelligence of your banking assistant (Firestore Synced).</p>
         </div>
 
         <div className="flex items-center gap-2">
