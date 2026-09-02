@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, Bell, Settings, UserCheck, LogOut, ShieldCheck, Menu } from 'lucide-react';
 import { NavTab, UserProfile } from '../types';
+import { APP_VERSION } from '../version';
 
 interface HeaderProps {
   activeTab: NavTab;
@@ -45,9 +46,14 @@ export const Header: React.FC<HeaderProps> = ({
             <Menu className="w-5 h-5" />
           </button>
         )}
-        <h2 className="text-base sm:text-xl font-semibold text-slate-800 tracking-tight truncate">
-          {titles[activeTab] || 'Banking Assistant'}
-        </h2>
+        <div className="flex items-center gap-2 truncate">
+          <h2 className="text-base sm:text-xl font-semibold text-slate-800 tracking-tight truncate">
+            {titles[activeTab] || 'Banking Assistant'}
+          </h2>
+          <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-bold tracking-tight">
+            {APP_VERSION}
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">

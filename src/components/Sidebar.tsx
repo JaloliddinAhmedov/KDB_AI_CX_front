@@ -12,6 +12,7 @@ import {
   X
 } from 'lucide-react';
 import { NavTab, UserProfile } from '../types';
+import { APP_VERSION } from '../version';
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -87,7 +88,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 KDB
               </div>
               <div>
-                <h1 className="font-bold text-slate-900 text-sm leading-snug">KDB Bank UZ</h1>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="font-bold text-slate-900 text-sm leading-snug">KDB Bank UZ</h1>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-extrabold tracking-tight" title={`Current Deployment: ${APP_VERSION}`}>
+                    {APP_VERSION}
+                  </span>
+                </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className={`px-1.5 py-0.2 rounded text-[10px] font-extrabold uppercase tracking-wide ${
                     isAdmin ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-700'

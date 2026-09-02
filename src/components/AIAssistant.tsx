@@ -16,6 +16,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { ChatMessage, KnowledgeItem } from '../types';
+import { generateClientSideAnswer } from '../utils/aiFallback';
 
 interface AIAssistantProps {
   knowledgeItems?: KnowledgeItem[];
@@ -121,17 +122,34 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ knowledgeItems = [] })
 
       const dynamicContext = buildKnowledgeContext();
 
-      const res = await fetch('/api/gemini/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: query,
-          history: historyPayload,
-          context: dynamicContext
-        })
-      });
+      let answerText = '';
 
-      const data = await res.json();
+      try {
+        const res = await fetch('/api/gemini/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: query,
+            history: historyPayload,
+            context: dynamicContext
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.text) {
+            answerText = data.text;
+          }
+        }
+      } catch (networkErr) {
+        // Backend not reachable on static hosts (e.g. Netlify without custom server)
+        console.warn('Backend server not reachable, using client-side AI engine:', networkErr);
+      }
+
+      // If backend was not reached or returned empty, execute client-side knowledge synthesis
+      if (!answerText) {
+        answerText = generateClientSideAnswer(query, dynamicContext);
+      }
 
       const topSources = knowledgeItems.length > 0 
         ? knowledgeItems.slice(0, 3).map(k => k.sourceName)
@@ -140,7 +158,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ knowledgeItems = [] })
       const assistantMessage: ChatMessage = {
         id: `msg-ai-${Date.now()}`,
         sender: 'assistant',
-        text: data.text || data.error || 'KDB Bank O\'zbekiston: So\'rovingiz qabul qilindi.',
+        text: answerText || 'KDB Bank O\'zbekiston: So\'rovingiz qabul qilindi.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         sources: topSources,
       };
@@ -148,12 +166,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ knowledgeItems = [] })
       setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
       console.error('Chat error:', err);
+      const fallback = generateClientSideAnswer(query, buildKnowledgeContext());
       setMessages(prev => [
         ...prev,
         {
           id: `msg-err-${Date.now()}`,
           sender: 'assistant',
-          text: 'KDB Bank O\'zbekiston AI assistenti bilan bog\'lanishda vaqtinchalik uzilish yuz berdi. Iltimos qayta urinib ko\'ring.',
+          text: fallback,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
