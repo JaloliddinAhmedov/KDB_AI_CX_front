@@ -62,17 +62,23 @@ export function generateClientSideAnswer(userMessage: string, contextText: strin
     allFaqs.push({ doc: "KDB Bank Rasmiy FAQ", q: f.q, a: f.a });
   });
 
-  // Extract from text format (Q: ... A: ...)
+  // Extract from text format (Q: ... A: ... or bullet updates)
   const lines = contextText.split('\n');
   let currentQ = '';
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed.match(/^(?:Q:|\d+\.\s*Q:|Savol\s*\(UZ\):|Вопрос\s*\(RU\):|Question\s*\(EN\):)\s*/i)) {
-      currentQ = trimmed.replace(/^(?:Q:|\d+\.\s*Q:|Savol\s*\(UZ\):|Вопрос\s*\(RU\):|Question\s*\(EN\):)\s*/i, '').trim();
-    } else if (trimmed.match(/^(?:A:|\d+\.\s*A:|Javob\s*\(UZ\):|Ответ\s*\(RU\):|Answer\s*\(EN\):)\s*/i) && currentQ) {
-      const currentA = trimmed.replace(/^(?:A:|\d+\.\s*A:|Javob\s*\(UZ\):|Ответ\s*\(RU\):|Answer\s*\(EN\):)\s*/i, '').trim();
+    if (trimmed.match(/^(?:Q:|\d+\.\s*Q:|Savol\s*\(UZ\):|Вопрос\s*\(RU\):|Question\s*\(EN\):|Savol:)\s*/i)) {
+      currentQ = trimmed.replace(/^(?:Q:|\d+\.\s*Q:|Savol\s*\(UZ\):|Вопрос\s*\(RU\):|Question\s*\(EN\):|Savol:)\s*/i, '').trim();
+    } else if (trimmed.match(/^(?:A:|\d+\.\s*A:|Javob\s*\(UZ\):|Ответ\s*\(RU\):|Answer\s*\(EN\):|Javob:)\s*/i) && currentQ) {
+      const currentA = trimmed.replace(/^(?:A:|\d+\.\s*A:|Javob\s*\(UZ\):|Ответ\s*\(RU\):|Answer\s*\(EN\):|Javob:)\s*/i, '').trim();
       allFaqs.push({ doc: "KDB Bank Hujjati", q: currentQ, a: currentA });
       currentQ = '';
+    } else if (trimmed.startsWith('- ') || trimmed.startsWith('• ') || trimmed.startsWith('[DIQQAT') || trimmed.startsWith('[YANGI')) {
+      // Direct update rule bullet point
+      const ruleText = trimmed.replace(/^[-•]\s*/, '').trim();
+      if (ruleText.length > 15) {
+        allFaqs.push({ doc: "KDB Bank Qoida Yangilanishi", q: ruleText, a: ruleText });
+      }
     }
   }
 

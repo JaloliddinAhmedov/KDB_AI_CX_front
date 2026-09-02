@@ -17,7 +17,10 @@ import {
   Loader2,
   Lock,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Edit3,
+  FileCode2,
+  Plus
 } from 'lucide-react';
 import { KnowledgeItem, FAQPair, UserProfile } from '../types';
 import { deleteKnowledgeItemFromDb, saveKnowledgeItemToDb } from '../lib/firestoreService';
@@ -179,13 +182,17 @@ export const AITrainingCenter: React.FC<AITrainingCenterProps> = ({
 
   const getFormatIcon = (format?: string) => {
     switch (format) {
+      case 'JSON':
+        return <FileCode2 className="w-5 h-5 text-amber-600" />;
+      case 'TXT':
+        return <Edit3 className="w-5 h-5 text-emerald-600" />;
       case 'PDF':
-        return <FileText className="w-5 h-5 text-slate-500" />;
+        return <FileText className="w-5 h-5 text-indigo-600" />;
       case 'CSV':
-        return <FileSpreadsheet className="w-5 h-5 text-slate-500" />;
+        return <FileSpreadsheet className="w-5 h-5 text-teal-600" />;
       case 'LINK':
       default:
-        return <LinkIcon className="w-5 h-5 text-slate-500" />;
+        return <LinkIcon className="w-5 h-5 text-blue-600" />;
     }
   };
 
@@ -197,17 +204,25 @@ export const AITrainingCenter: React.FC<AITrainingCenterProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">AI Knowledge Base & Training</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">Manage and refine the intelligence of your banking assistant (Firestore Synced).</p>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">Hujjatlar, matnli o'zgarishlar va veb-sahifalar orqali KDB Bank AI intellektini o'qitish.</p>
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={isAdmin ? onOpenNewJobModal : onPermissionDenied}
+            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Yangi O'qitish (Train)</span>
+          </button>
           <span className={`px-3 py-1.5 rounded-full text-xs font-bold border flex items-center gap-1.5 ${
             isAdmin 
               ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
               : 'bg-amber-50 text-amber-800 border-amber-200'
           }`}>
             {isAdmin ? <ShieldCheck className="w-4 h-4 text-indigo-600" /> : <Lock className="w-4 h-4 text-amber-600" />}
-            {isAdmin ? 'Admin: Full Train Rights' : 'User: Read-Only Access'}
+            {isAdmin ? 'Admin: To\'liq Huquq' : 'User: Read-Only'}
           </span>
         </div>
       </div>
@@ -216,7 +231,7 @@ export const AITrainingCenter: React.FC<AITrainingCenterProps> = ({
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 text-xs text-amber-900">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
           <div>
-            <span className="font-bold">Eslatma:</span> Siz <span className="font-bold uppercase text-amber-950">Standard User</span> rolidasiz. Yangi fayl upload qilish, veb-sayt scrape qilish va hujjatlarni o'chirish taqiqlangan (faqat ADMIN rol egalari o'tkaza oladi).
+            <span className="font-bold">Eslatma:</span> Siz <span className="font-bold uppercase text-amber-950">Standard User</span> rolidasiz. Yangi fayl upload qilish, matnli o'qitish va hujjatlarni o'chirish taqiqlangan (faqat ADMIN rol egalari o'tkaza oladi).
           </div>
         </div>
       )}
@@ -224,98 +239,87 @@ export const AITrainingCenter: React.FC<AITrainingCenterProps> = ({
       {/* Top Section Grid: Data Upload + Model Health */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Data Upload Card (Span 8) */}
-        <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col justify-between space-y-6">
+        <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col justify-between space-y-5">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-slate-900 text-base flex items-center gap-2">
               <Globe className="w-5 h-5 text-indigo-600" />
-              Data Upload & Crawl
+              O'qitish Manbalari (Fayl, Matn, URL)
             </h3>
             <span className="bg-slate-100 text-slate-600 text-xs font-medium px-3 py-1 rounded-full">
-              3 Slots Remaining
+              KDB Bank AI Engine
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Dropzone Box */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {/* Box 1: Dropzone File Box */}
             <div 
               onClick={isAdmin ? onOpenNewJobModal : onPermissionDenied}
-              className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 flex flex-col items-center justify-center space-y-3 group ${
+              className={`border border-slate-200 rounded-xl p-4 text-center transition-all duration-200 flex flex-col items-center justify-between space-y-2 group ${
                 isAdmin 
-                  ? 'border-slate-200 hover:border-indigo-400 bg-slate-50/50 hover:bg-slate-50 cursor-pointer' 
-                  : 'border-slate-200 bg-slate-100/60 cursor-not-allowed opacity-80'
+                  ? 'hover:border-indigo-400 bg-slate-50/50 hover:bg-slate-50 cursor-pointer' 
+                  : 'bg-slate-100/60 cursor-not-allowed opacity-80'
               }`}
             >
-              <div className="w-12 h-12 rounded-full bg-slate-100 group-hover:bg-indigo-50 flex items-center justify-center transition-colors">
-                {isAdmin ? (
-                  <FileText className="w-6 h-6 text-slate-400 group-hover:text-indigo-600 transition-colors" />
-                ) : (
-                  <Lock className="w-6 h-6 text-slate-400" />
-                )}
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                <FileText className="w-5 h-5" />
               </div>
-
               <div>
-                <p className="text-sm font-semibold text-slate-800">
-                  {isAdmin ? 'Drop FAQ documents here' : 'Drop FAQ documents (Admin Only)'}
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">PDF, CSV, or TXT up to 50MB</p>
+                <p className="text-xs font-bold text-slate-800">Hujjat Yuklash</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">PDF, JSON, CSV, TXT</p>
               </div>
-
-              <button 
-                type="button" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isAdmin) onOpenNewJobModal();
-                  else onPermissionDenied();
-                }}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 underline cursor-pointer"
-              >
-                {isAdmin ? 'Or browse files' : 'Admin Login Required'}
-              </button>
+              <span className="text-[11px] font-semibold text-indigo-600 group-hover:underline">
+                Fayl tanlash →
+              </span>
             </div>
 
-            {/* Scrape Website URL */}
-            <div className="flex flex-col justify-between space-y-3">
+            {/* Box 2: Raw Text / Knowledge Override Box */}
+            <div 
+              onClick={isAdmin ? onOpenNewJobModal : onPermissionDenied}
+              className={`border border-slate-200 rounded-xl p-4 text-center transition-all duration-200 flex flex-col items-center justify-between space-y-2 group ${
+                isAdmin 
+                  ? 'hover:border-emerald-400 bg-emerald-50/30 hover:bg-emerald-50/60 cursor-pointer' 
+                  : 'bg-slate-100/60 cursor-not-allowed opacity-80'
+              }`}
+            >
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <Edit3 className="w-5 h-5" />
+              </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                  Scrape Website URL
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="url"
-                    value={scrapeUrl}
-                    onChange={(e) => setScrapeUrl(e.target.value)}
-                    placeholder="https://kdb.uz"
-                    disabled={!isAdmin}
-                    className="flex-1 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 disabled:bg-slate-100"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleFetchUrl}
-                    disabled={isFetchingUrl}
-                    className="bg-[#0c192d] hover:bg-[#152744] text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-                  >
-                    {isFetchingUrl ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Fetching
-                      </>
-                    ) : (
-                      'Fetch'
-                    )}
-                  </button>
-                </div>
-                <p className="text-[11px] text-slate-400 italic mt-1.5">
-                  System will crawl up to 2 levels deep.
-                </p>
+                <p className="text-xs font-bold text-slate-800">Matnli O'qitish</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Qoida, o'zgarish & Q&A</p>
               </div>
+              <span className="text-[11px] font-semibold text-emerald-700 group-hover:underline">
+                Matn kiritish →
+              </span>
+            </div>
 
-              {/* Training Tip box */}
-              <div className="bg-[#f0f5ff] border border-indigo-100 rounded-xl p-3.5 flex items-start gap-2.5">
-                <Info className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  <strong className="text-slate-800 font-semibold">Training tip:</strong> Provide clear Q&A formats in your documents for better model accuracy.
-                </p>
+            {/* Box 3: Website Crawler Box */}
+            <div className="border border-slate-200 rounded-xl p-4 flex flex-col justify-between space-y-2 bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-indigo-600" />
+                <span className="text-xs font-bold text-slate-800">Sayt Crawl</span>
               </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="url"
+                  value={scrapeUrl}
+                  onChange={(e) => setScrapeUrl(e.target.value)}
+                  placeholder="https://kdb.uz"
+                  disabled={!isAdmin}
+                  className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:bg-slate-100"
+                />
+                <button
+                  type="button"
+                  onClick={handleFetchUrl}
+                  disabled={isFetchingUrl}
+                  className="bg-[#0c192d] hover:bg-[#152744] text-white px-3 py-1.5 rounded-lg font-medium text-xs transition-colors flex items-center gap-1 disabled:opacity-50 cursor-pointer shrink-0"
+                >
+                  {isFetchingUrl ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Fetch'}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 italic">
+                kdb.uz sahifalarini avto-indekslash
+              </p>
             </div>
           </div>
         </div>
