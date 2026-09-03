@@ -38,6 +38,55 @@ export interface FAQPair {
   confidence: number;
 }
 
+export interface SavedBeneficiary {
+  id: string;
+  name: string;
+  cardOrAccount: string;
+  type: 'Uzcard' | 'Humo' | 'Visa' | 'MasterCard' | 'Account' | 'Other';
+  bankName?: string;
+  avatarColor?: string;
+  lastUsed?: string;
+}
+
+export interface BankAccount {
+  id: string;
+  name: string;
+  accountNumber: string;
+  balance: number;
+  currency: 'UZS' | 'USD' | 'EUR';
+  type: 'Checking' | 'Savings' | 'Card' | 'Corporate';
+  cardMask?: string;
+  color?: string;
+}
+
+export interface ComplianceCheckData {
+  beneficiary: string;
+  amount: number;
+  currency: string;
+  riskScore: number;
+  amlStatus: 'Passed' | 'Review' | 'Flagged';
+  sanctionCheck: 'Clean' | 'Match Found';
+  kycLevel: 'Verified' | 'Basic';
+  limitStatus: 'Approved' | 'Exceeded';
+  notes: string[];
+}
+
+export interface TransferPayload {
+  id: string;
+  fromAccount: string;
+  toBeneficiary: string;
+  toCardOrAccount: string;
+  amount: number;
+  currency: 'UZS' | 'USD';
+  purpose: string;
+  commission: number;
+  status: 'Draft' | 'Processing' | 'Completed' | 'Failed';
+  currentStep?: number;
+  compliance?: ComplianceCheckData;
+  receiptId?: string;
+  timestamp?: string;
+}
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'assistant';
@@ -45,6 +94,8 @@ export interface ChatMessage {
   timestamp: string;
   sources?: string[];
   suggestedActions?: string[];
+  widget?: 'balance' | 'transfer' | 'compliance' | 'receipt' | 'exchange' | 'history';
+  widgetData?: any;
 }
 
 export interface BankTransaction {

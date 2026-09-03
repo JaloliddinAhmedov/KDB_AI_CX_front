@@ -137,7 +137,11 @@ export default function App() {
           </div>
 
           <div className={activeTab === 'assistant' ? 'block' : 'hidden'}>
-            <AIAssistant knowledgeItems={knowledgeItems} />
+            <AIAssistant 
+              knowledgeItems={knowledgeItems} 
+              transactions={transactions}
+              setTransactions={setTransactions}
+            />
           </div>
 
           <div className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
