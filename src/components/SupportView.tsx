@@ -145,7 +145,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ tickets, setTickets })
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-indigo-600" />
-                  Gemini Support Co-Pilot Draft Response:
+                  KDB AI Support Co-Pilot Draft Response:
                 </label>
 
                 <button

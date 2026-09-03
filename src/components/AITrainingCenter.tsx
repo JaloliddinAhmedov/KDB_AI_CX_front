@@ -108,7 +108,7 @@ export const AITrainingCenter: React.FC<AITrainingCenterProps> = ({
         status: 'Completed',
         faqCount: data.faqs?.length || 8,
         url: scrapeUrl,
-        summary: `Crawled website content from ${scrapeUrl}. Extracted ${data.faqs?.length || 8} Q&A pairs for Gemini AI training.`,
+        summary: `Crawled website content from ${scrapeUrl}. Extracted ${data.faqs?.length || 8} Q&A pairs for KDB AI knowledge base training.`,
         faqs: data.faqs || [],
         createdBy: currentUser.displayName
       };
@@ -369,7 +369,7 @@ export const AITrainingCenter: React.FC<AITrainingCenterProps> = ({
           {isRetraining && (
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-slate-500 font-medium">
-                <span>Retraining Gemini Neural Weights...</span>
+                <span>Retraining KDB AI Neural Weights...</span>
                 <span>{retrainProgress}%</span>
               </div>
               <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
@@ -586,7 +586,7 @@ export const AITrainingCenter: React.FC<AITrainingCenterProps> = ({
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-indigo-600" />
-                <h3 className="font-bold text-slate-900 text-lg">Extracted Gemini FAQ Pairs</h3>
+                <h3 className="font-bold text-slate-900 text-lg">Extracted AI Knowledge FAQ Pairs</h3>
               </div>
               <button
                 onClick={() => setExtractedFaqsModal(null)}
@@ -597,7 +597,7 @@ export const AITrainingCenter: React.FC<AITrainingCenterProps> = ({
             </div>
 
             <p className="text-xs text-slate-500">
-              Gemini model successfully extracted {extractedFaqsModal.length} training Q&A pairs for the KDB Bank Uzbekistan knowledge graph.
+              KDB AI model successfully extracted {extractedFaqsModal.length} training Q&A pairs for the KDB Bank Uzbekistan knowledge graph.
             </p>
 
             <div className="space-y-3">

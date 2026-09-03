@@ -66,7 +66,7 @@ export const DashboardView: React.FC = () => {
               -0.15s <ArrowUpRight className="w-3.5 h-3.5 rotate-90" />
             </span>
           </div>
-          <p className="text-[11px] text-slate-400">Gemini 3.6 Flash latency</p>
+          <p className="text-[11px] text-slate-400">AI Engine latency</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs space-y-2">
@@ -145,7 +145,7 @@ export const DashboardView: React.FC = () => {
         <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-5">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-indigo-600" />
-            <h3 className="font-semibold text-slate-900 text-base">Gemini Intelligence Directives</h3>
+            <h3 className="font-semibold text-slate-900 text-base">KDB AI Intelligence Directives</h3>
           </div>
 
           <div className="space-y-3.5">

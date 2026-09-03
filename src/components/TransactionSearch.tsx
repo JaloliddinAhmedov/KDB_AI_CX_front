@@ -73,7 +73,7 @@ export const TransactionSearch: React.FC<TransactionSearchProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Transaction Intelligence Search</h1>
-          <p className="text-sm text-slate-500 mt-1">Search customer transactions and trigger Gemini AI Fraud & Risk Analyzer.</p>
+          <p className="text-sm text-slate-500 mt-1">Search customer transactions and trigger KDB AI Fraud & Risk Analyzer.</p>
         </div>
 
         <button
@@ -84,12 +84,12 @@ export const TransactionSearch: React.FC<TransactionSearchProps> = ({
           {isAnalyzing ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Analyzing Risk via Gemini...</span>
+              <span>Analyzing Risk via KDB AI...</span>
             </>
           ) : (
             <>
               <Sparkles className="w-4 h-4" />
-              <span>Run Gemini Fraud & Risk Audit</span>
+              <span>Run AI Fraud & Risk Audit</span>
             </>
           )}
         </button>
@@ -101,7 +101,7 @@ export const TransactionSearch: React.FC<TransactionSearchProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-indigo-700 font-bold text-base">
               <Sparkles className="w-5 h-5 text-indigo-600" />
-              <span>Gemini Transaction Intelligence Audit</span>
+              <span>KDB AI Transaction Intelligence Audit</span>
             </div>
             <span className={`px-3 py-1 rounded-full text-xs font-bold ${
               analysisResult.riskLevel === 'High'

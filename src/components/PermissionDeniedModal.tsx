@@ -44,7 +44,7 @@ export const PermissionDeniedModal: React.FC<PermissionDeniedModalProps> = ({
           </div>
 
           <p className="leading-relaxed text-slate-700">
-            KDB Bank Uzbekistan AI-CX xavfsizlik va muvofiqlik siyosatiga ko'ra, Gemini AI modeliga yangi fayl va hujjatlar yuklash yoki veb-saytlarni scrape qilish huquqi <strong>faqat ADMIN rollariga berilgan</strong>.
+            KDB Bank Uzbekistan AI-CX xavfsizlik va muvofiqlik siyosatiga ko'ra, AI modeliga yangi fayl va hujjatlar yuklash yoki veb-saytlarni scrape qilish huquqi <strong>faqat ADMIN rollariga berilgan</strong>.
           </p>
         </div>
 
