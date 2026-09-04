@@ -9,20 +9,31 @@ import {
   Copy, 
   Check, 
   RotateCw, 
-  Globe2,
-  ShieldCheck,
-  CreditCard,
-  Building2,
-  HelpCircle,
-  Wallet,
-  ArrowRightLeft,
-  History,
-  ShieldAlert,
-  ArrowUpRight,
-  TrendingUp,
-  Lock
+  ShieldCheck, 
+  CreditCard, 
+  Wallet, 
+  ArrowRightLeft, 
+  History, 
+  Lock, 
+  BookOpen, 
+  Zap, 
+  ShieldAlert, 
+  Headphones, 
+  ExternalLink,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
-import { ChatMessage, KnowledgeItem, BankAccount, BankTransaction, TransferPayload, ComplianceCheckData } from '../types';
+import { 
+  ChatMessage, 
+  KnowledgeItem, 
+  BankAccount, 
+  BankTransaction, 
+  TransferPayload, 
+  ComplianceCheckData, 
+  SupportTicket, 
+  UserProfile,
+  NavTab
+} from '../types';
 import { generateClientSideAnswer } from '../utils/aiFallback';
 import { 
   INITIAL_USER_ACCOUNTS, 
@@ -36,18 +47,31 @@ import { TransferWidget } from './chatWidgets/TransferWidget';
 import { ComplianceWidget } from './chatWidgets/ComplianceWidget';
 import { ExchangeWidget } from './chatWidgets/ExchangeWidget';
 import { HistoryWidget } from './chatWidgets/HistoryWidget';
+import { NativeBankingModal, NativeBankingTab } from './NativeBankingModal';
+
+export type AssistantMode = 'knowledge-only' | 'copilot' | 'security-native';
 
 interface AIAssistantProps {
   knowledgeItems?: KnowledgeItem[];
   transactions?: BankTransaction[];
   setTransactions?: React.Dispatch<React.SetStateAction<BankTransaction[]>>;
+  tickets?: SupportTicket[];
+  setTickets?: React.Dispatch<React.SetStateAction<SupportTicket[]>>;
+  currentUser?: UserProfile;
+  onNavigateToTab?: (tab: NavTab) => void;
 }
 
 export const AIAssistant: React.FC<AIAssistantProps> = ({ 
   knowledgeItems = [],
   transactions = [],
-  setTransactions
+  setTransactions,
+  tickets = [],
+  setTickets,
+  currentUser,
+  onNavigateToTab
 }) => {
+  const [assistantMode, setAssistantMode] = useState<AssistantMode>('copilot');
+
   const [accounts, setAccounts] = useState<BankAccount[]>(() => {
     const saved = localStorage.getItem('kdb_user_accounts');
     if (saved) {
@@ -64,22 +88,41 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     {
       id: 'm-1',
       sender: 'assistant',
-      text: "Assalomu alaykum! Men KDB Bank Uzbekistan AI-CX Copilot yordamchingizman.\n\nMen orqali chatning o'zida:\n• Hisob va kartalaringiz balansini ko'rishingiz\n• Xavfsiz pul o'tkazmalarini amalga oshirishingiz (AML/Compliance tekshiruvi bilan)\n• Valyutani konvertatsiya qilishingiz\n• Kredit, depozit va bank qoidalari bo'yicha savollaringizga rasmiy javob olishingiz mumkin.",
+      text: "Hello! I am your KDB Bank Uzbekistan AI-CX Copilot assistant.\n\nDirectly within this chat, you can:\n• Check live balances of your accounts and cards (with historical comparison)\n• Execute secure instant money transfers with automated AML & compliance\n• Convert currencies at official Central Bank & KDB rates\n• Switch between 3 Assistant Modes or escalate unresolved issues directly to Staff Support.",
       timestamp: '09:00',
       sources: ['KDB Bank Core Banking & Knowledge Base'],
       suggestedActions: [
-        '💳 Balansimni ko\'rsat',
-        '💸 Akmal Karimovga 1 500 000 so\'m o\'tkaz',
-        '🛡️ Compliance tekshiruvi: Apex Logistics',
-        '💱 100$ ni so\'mga ayirboshla',
-        '📜 So\'nggi tranzaksiyalar tarixi'
+        '💳 Check my account balance',
+        '💸 Transfer 1,500,000 UZS to Akmal Karimov',
+        '🛡️ Compliance check: Apex Logistics',
+        '💱 Exchange $100 to UZS',
+        '📜 Recent transaction history'
       ]
     }
   ]);
+
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
+
+  // Native Sandbox Modal State (for Mode 3)
+  const [isNativeModalOpen, setIsNativeModalOpen] = useState(false);
+  const [nativeModalTab, setNativeModalTab] = useState<NativeBankingTab>('transfer');
+  const [prefilledTransfer, setPrefilledTransfer] = useState<Partial<TransferPayload>>({});
+  const [prefilledComplianceBeneficiary, setPrefilledComplianceBeneficiary] = useState<string>('Apex Logistics LLC');
+
+  // Helper to open native modal with specific tab and payload
+  const openSecurityModal = (
+    tab: NativeBankingTab, 
+    transferData?: Partial<TransferPayload>, 
+    ben?: string
+  ) => {
+    if (transferData) setPrefilledTransfer(transferData);
+    if (ben) setPrefilledComplianceBeneficiary(ben);
+    setNativeModalTab(tab);
+    setIsNativeModalOpen(true);
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -139,6 +182,43 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     return contextParts.join('\n\n========================================\n\n');
   };
 
+  // Dedicated function to escalate unresolved queries directly to human Staff Support
+  const handleEscalateToSupport = (userQueryText?: string, reason?: string) => {
+    const query = userQueryText || inputText || 'Unresolved customer banking query';
+    const ticketId = `TICK-${Date.now().toString().slice(-4)}`;
+    
+    const newTicket: SupportTicket = {
+      id: ticketId,
+      customerName: currentUser?.displayName || 'Akmal Karimov (Client)',
+      accountTier: currentUser?.role === 'admin' ? 'Enterprise' : 'Gold',
+      subject: `AI Escalation: ${query.slice(0, 48)}${query.length > 48 ? '...' : ''}`,
+      issue: `Customer asked: "${query}".\n\nAI Status: ${reason || 'Escalated by customer request / AI could not resolve automatically with high certainty'}.\nTimestamp: ${new Date().toLocaleString()}`,
+      status: 'Open',
+      priority: 'High',
+      date: new Date().toISOString().slice(0, 10),
+      aiSuggestedReply: ''
+    };
+
+    if (setTickets) {
+      setTickets(prev => [newTicket, ...prev]);
+    }
+
+    const escalationMessage: ChatMessage = {
+      id: `msg-esc-${Date.now()}`,
+      sender: 'assistant',
+      text: `📋 **Escalated to KDB Staff Support (Ticket #${ticketId})**\n\nYour request has been forwarded directly to our Human Customer Support specialists queue. Only authorized bank staff will review your case details and reply.\n\n• **Status:** Open in Staff Escalation Queue\n• **Priority:** High Priority\n• **Account Tier:** ${newTicket.accountTier}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      sources: ['KDB Core Support Desk & Escalation Queue'],
+      suggestedActions: [
+        '💳 Check My Balances',
+        '🔄 Switch to Copilot Mode',
+        '📜 View Transaction History'
+      ]
+    };
+
+    setMessages(prev => [...prev, escalationMessage]);
+  };
+
   const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || inputText;
     if (!query.trim() || isLoading) return;
@@ -155,23 +235,225 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setIsLoading(true);
 
     try {
-      // 1. Check for interactive conversational banking intents
+      const lowerQuery = query.toLowerCase();
+
+      // Check for human support / escalation trigger
+      if (
+        lowerQuery.includes('support') ||
+        lowerQuery.includes('operator') ||
+        lowerQuery.includes('staff') ||
+        lowerQuery.includes('hal qilolmad') ||
+        lowerQuery.includes('muammo') ||
+        lowerQuery.includes('human') ||
+        lowerQuery.includes('yordam berolmad')
+      ) {
+        if (assistantMode === 'security-native') {
+          openSecurityModal('support');
+          setTimeout(() => {
+            const assistantMessage: ChatMessage = {
+              id: `msg-ai-${Date.now()}`,
+              sender: 'assistant',
+              text: `🔒 **Direct Staff Support Window Opened**\n\nYour confidential Human Staff Support window is open. You can draft and submit your inquiry directly to authorized bank personnel without AI exposure.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sources: ['KDB Core Support Desk & Escalation Queue']
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+            setIsLoading(false);
+          }, 300);
+          return;
+        }
+
+        setTimeout(() => {
+          handleEscalateToSupport(query, 'Direct customer escalation to human staff');
+          setIsLoading(false);
+        }, 400);
+        return;
+      }
+
+      // Check for banking intents
       const parsedIntent = parseBankingIntent(query);
 
+      // =========================================================================
+      // MODE 1: KNOWLEDGE-ONLY AI (Trained Files Only, No Transaction Execution)
+      // =========================================================================
+      if (assistantMode === 'knowledge-only') {
+        if (parsedIntent.intent === 'transfer') {
+          setTimeout(() => {
+            const assistantMessage: ChatMessage = {
+              id: `msg-ai-${Date.now()}`,
+              sender: 'assistant',
+              text: `📚 **Knowledge-Only Mode Active**\n\nIn this mode, direct financial execution in chat is disabled. According to KDB Bank Uzbekistan regulations, interbank transfers can be executed via KDB Mobile Banking, KDB Net, or by switching this assistant to **Full Copilot** or **Security Modal** mode via the menu above.\n\n• Daily transfer limit for verified accounts: 50,000,000 UZS / $5,000\n• Central Bank 0% commission on interbank transfers up to 10M UZS`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sources: ['KDB Knowledge Base: Interbank Guidelines & Tariffs']
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+            setIsLoading(false);
+          }, 400);
+          return;
+        }
+
+        if (parsedIntent.intent === 'balance') {
+          setTimeout(() => {
+            const assistantMessage: ChatMessage = {
+              id: `msg-ai-${Date.now()}`,
+              sender: 'assistant',
+              text: `📚 **Knowledge-Only Mode Active**\n\nDirect balance queries and transaction cards are hidden in strict Knowledge mode to preserve pure advisory chat. You can switch to **Full Copilot** (for in-chat balance snapshots) or **Security Modal** (for direct verified balance view) using the mode menu at the top.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sources: ['KDB Core Security & Data Privacy Policy']
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+            setIsLoading(false);
+          }, 400);
+          return;
+        }
+
+        if (parsedIntent.intent === 'exchange') {
+          setTimeout(() => {
+            const assistantMessage: ChatMessage = {
+              id: `msg-ai-${Date.now()}`,
+              sender: 'assistant',
+              text: `📚 **KDB Official Foreign Exchange Rates**:\n\n• **USD/UZS**: Buy ${EXCHANGE_RATES.USD_UZS_BUY.toLocaleString()} UZS | Sell ${EXCHANGE_RATES.USD_UZS_SELL.toLocaleString()} UZS\n• **EUR/UZS**: Buy ${EXCHANGE_RATES.EUR_UZS_BUY.toLocaleString()} UZS | Sell ${EXCHANGE_RATES.EUR_UZS_SELL.toLocaleString()} UZS\n\nTo execute direct currency conversions, select **Full Copilot** or **Security Modal** from the top menu.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sources: ['KDB Treasury FX Bulletin']
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+            setIsLoading(false);
+          }, 400);
+          return;
+        }
+
+        if (parsedIntent.intent === 'compliance') {
+          setTimeout(() => {
+            const assistantMessage: ChatMessage = {
+              id: `msg-ai-${Date.now()}`,
+              sender: 'assistant',
+              text: `📚 **AML & Compliance Regulations**:\n\nAll payments processed through KDB Bank Uzbekistan are screened under Central Bank Law No. ZRU-558 on Combating Money Laundering and Terrorist Financing. Transactions over 100,000,000 UZS or foreign currency equivalents are subject to mandatory monitoring.\n\nTo run counterparty sanctions checks, use **Security Modal** or **Full Copilot**.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sources: ['KDB Compliance Department & CBU Guidelines']
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+            setIsLoading(false);
+          }, 400);
+          return;
+        }
+      }
+
+      // =========================================================================
+      // MODE 3: SECURITY-FIRST / NATIVE APP MODAL MODE (Isolated UI Sandbox)
+      // =========================================================================
+      if (assistantMode === 'security-native') {
+        if (parsedIntent.intent === 'transfer') {
+          const payload: TransferPayload = parsedIntent.data;
+          openSecurityModal('transfer', payload);
+
+          setTimeout(() => {
+            const assistantMessage: ChatMessage = {
+              id: `msg-ai-${Date.now()}`,
+              sender: 'assistant',
+              text: `🔒 **Security Modal Triggered: Secure Transfer**\n\nOpening the native banking transfer window for **${payload.toBeneficiary}** (${formatCurrency(payload.amount, payload.currency)}). Your transaction is routed via isolated direct clearing without AI token exposure.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sources: ['KDB Hardware Security Sandbox']
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+            setIsLoading(false);
+          }, 300);
+          return;
+        }
+
+        if (parsedIntent.intent === 'balance') {
+          openSecurityModal('balance');
+
+          setTimeout(() => {
+            const assistantMessage: ChatMessage = {
+              id: `msg-ai-${Date.now()}`,
+              sender: 'assistant',
+              text: `🔒 **Security Modal Triggered: Account Balances**\n\nOpening your isolated, client-side verified KDB Account Balances modal dialog directly from the core ledger.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sources: ['KDB Direct API Sandbox']
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+            setIsLoading(false);
+          }, 300);
+          return;
+        }
+
+        if (parsedIntent.intent === 'exchange') {
+          openSecurityModal('exchange');
+
+          setTimeout(() => {
+            const assistantMessage: ChatMessage = {
+              id: `msg-ai-${Date.now()}`,
+              sender: 'assistant',
+              text: `🔒 **Security Modal Triggered: Currency FX**\n\nOpening the native KDB Currency FX Exchange modal window for direct interbank conversion.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sources: ['KDB Direct Clearing Desk']
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+            setIsLoading(false);
+          }, 300);
+          return;
+        }
+
+        if (parsedIntent.intent === 'compliance') {
+          const ben = parsedIntent.data?.beneficiary || 'Apex Logistics LLC';
+          openSecurityModal('compliance', undefined, ben);
+
+          setTimeout(() => {
+            const assistantMessage: ChatMessage = {
+              id: `msg-ai-${Date.now()}`,
+              sender: 'assistant',
+              text: `🔒 **Security Modal Triggered: Confidential AML Screening**\n\nOpening the confidential AML & Sanctions screening dialog for **${ben}**. Screenings run directly on the core banking compliance matrix without external AI prompt transmission.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sources: ['CBU Financial Monitoring & OFAC Screening Matrix']
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+            setIsLoading(false);
+          }, 300);
+          return;
+        }
+
+        if (parsedIntent.intent === 'history') {
+          openSecurityModal('balance');
+
+          setTimeout(() => {
+            const assistantMessage: ChatMessage = {
+              id: `msg-ai-${Date.now()}`,
+              sender: 'assistant',
+              text: `🔒 **Security Modal Triggered: Ledger Statements**\n\nOpening your verified KDB core account statements and balance register in the isolated dialog.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sources: ['KDB Core Transaction Ledger']
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+            setIsLoading(false);
+          }, 300);
+          return;
+        }
+      }
+
+      // =========================================================================
+      // MODE 2: FULL CONVERSATIONAL COPILOT (In-Chat Interactive Widgets)
+      // =========================================================================
       if (parsedIntent.intent === 'balance') {
+        const snapshot = JSON.parse(JSON.stringify(accounts));
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
         setTimeout(() => {
           const assistantMessage: ChatMessage = {
             id: `msg-ai-${Date.now()}`,
             sender: 'assistant',
-            text: "KDB Bank hisoblaringiz va kartalaringiz bo'yicha joriy qoldiqlar:",
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            text: `Here is the recorded balance snapshot of your KDB Bank Uzbekistan accounts (captured at ${timeStr}):`,
+            timestamp: timeStr,
             sources: ['KDB Core Banking API', 'Account Balance Registry'],
             widget: 'balance',
-            widgetData: accounts,
+            widgetData: {
+              snapshotAccounts: snapshot,
+              snapshotTime: timeStr,
+              snapshotTimestamp: Date.now()
+            },
             suggestedActions: [
-              '💸 Pul o\'tkazish (Transfer)',
-              '💱 Valyuta ayirboshlash',
-              '📜 So\'nggi tranzaksiyalar'
+              '💸 Send Money (Transfer)',
+              '💱 Exchange Currencies',
+              '📜 Transaction History'
             ]
           };
           setMessages(prev => [...prev, assistantMessage]);
@@ -186,15 +468,15 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           const assistantMessage: ChatMessage = {
             id: `msg-ai-${Date.now()}`,
             sender: 'assistant',
-            text: `So'rovingiz qabul qilindi. ${payload.toBeneficiary} nomiga ${formatCurrency(payload.amount, payload.currency)} miqdorida pul o'tkazish tayyorlandi.\n\n🛡️ **Compliance & AML tekshiruvi:** BMT va Markaziy Bank sanksiya ro'yxatlari bo'yicha risk darajasi juda past (2/100). Quyidagi kartadan tranzaksiyani tasdiqlang:`,
+            text: `Transfer request prepared. Sending ${formatCurrency(payload.amount, payload.currency)} to ${payload.toBeneficiary}.\n\n🛡️ **Compliance & AML Check:** Passed sanctions screening (Risk: 2/100). Please choose your sender account and confirm below:`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             sources: ['KDB Instant Payments Gateway', 'AML/Sanctions Screen Engine'],
             widget: 'transfer',
             widgetData: payload,
             suggestedActions: [
-              '💳 Balansimni tekshirish',
-              '🛡️ Kengaytirilgan Compliance ko\'rik',
-              'Bekor qilish'
+              '💳 Check My Balances',
+              '🛡️ Full Compliance Screening',
+              '📜 View Transaction History'
             ]
           };
           setMessages(prev => [...prev, assistantMessage]);
@@ -209,14 +491,14 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           const assistantMessage: ChatMessage = {
             id: `msg-ai-${Date.now()}`,
             sender: 'assistant',
-            text: `KDB Bank Avtomatlashtirilgan Xavfsizlik & AML Compliance Tahlili (${compData.beneficiary}):\n\n• Sanctions Screening (OFAC/UN/CB): Toza (Clean)\n• AML Risk Ko'rsatkichi: ${compData.riskScore}/100 (Past xavf)\n• Tranzaksiya Limiti: Tasdiqlangan`,
+            text: `KDB Bank Automated Security & AML Compliance Report (${compData.beneficiary}):\n\n• Sanctions Screening (OFAC/UN/CB): Clean\n• AML Risk Assessment Score: ${compData.riskScore}/100 (Low Risk)\n• Daily Limit Status: Verified & Approved`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             sources: ['OFAC & UN Sanctions DB', 'KDB AML Compliance Matrix'],
             widget: 'compliance',
             widgetData: compData,
             suggestedActions: [
-              `💸 ${compData.beneficiary}ga pul o'tkazish`,
-              '💳 Balansni ko\'rish'
+              `💸 Transfer funds to ${compData.beneficiary}`,
+              '💳 View Account Balances'
             ]
           };
           setMessages(prev => [...prev, assistantMessage]);
@@ -231,14 +513,14 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           const assistantMessage: ChatMessage = {
             id: `msg-ai-${Date.now()}`,
             sender: 'assistant',
-            text: `KDB Bank rasmiy valyuta kursi:\n• 1 USD = ${EXCHANGE_RATES.USD_UZS_BUY.toLocaleString()} UZS (Sotib olish)\n• 1 USD = ${EXCHANGE_RATES.USD_UZS_SELL.toLocaleString()} UZS (Sotish)\n\nQuyidagi interaktiv kalkulyatordan to'g'ridan-to'g'ri ayirboshlashni amalga oshirishingiz mumkin:`,
+            text: `Official KDB Bank Exchange Rates:\n• 1 USD = ${EXCHANGE_RATES.USD_UZS_BUY.toLocaleString()} UZS (Buy)\n• 1 USD = ${EXCHANGE_RATES.USD_UZS_SELL.toLocaleString()} UZS (Sell)\n\nYou can convert currencies directly using the interactive converter below:`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             sources: ['KDB FX Trading Desk', 'Central Bank of Uzbekistan Rates'],
             widget: 'exchange',
             widgetData: { defaultAmount: amount },
             suggestedActions: [
-              '💳 Balansimni tekshirish',
-              '💸 Pul o\'tkazish'
+              '💳 Check Balances',
+              '💸 Send Money'
             ]
           };
           setMessages(prev => [...prev, assistantMessage]);
@@ -252,14 +534,14 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           const assistantMessage: ChatMessage = {
             id: `msg-ai-${Date.now()}`,
             sender: 'assistant',
-            text: "KDB Bank hisoblaringiz bo'yicha so'nggi amalga oshirilgan to'lov va operatsiyalar tarixi:",
+            text: "Here is your recent banking transaction history across all KDB accounts:",
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             sources: ['KDB Core Transaction Ledger'],
             widget: 'history',
             widgetData: transactions,
             suggestedActions: [
-              '💳 Balansimni ko\'rsat',
-              '💸 Yangi pul o\'tkazish'
+              '💳 Check My Balances',
+              '💸 New Transfer'
             ]
           };
           setMessages(prev => [...prev, assistantMessage]);
@@ -268,7 +550,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         return;
       }
 
-      // 2. Standard Knowledge Base / Gemini AI Query
+      // =========================================================================
+      // Standard Knowledge Base / Gemini AI Query
+      // =========================================================================
       const historyPayload = messages
         .filter(m => m.id !== 'm-1')
         .map(m => ({
@@ -277,7 +561,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         }));
 
       const dynamicContext = buildKnowledgeContext();
-
       let answerText = '';
 
       try {
@@ -312,39 +595,32 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       const assistantMessage: ChatMessage = {
         id: `msg-ai-${Date.now()}`,
         sender: 'assistant',
-        text: answerText || "KDB Bank O'zbekiston: So'rovingiz qabul qilindi.",
+        text: answerText || "KDB Bank Uzbekistan: Your request has been processed.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         sources: topSources,
-        suggestedActions: [
-          '💳 Balansimni ko\'rsat',
-          '💸 Akmalga 1.5M so\'m o\'tkaz',
-          '💱 Valyuta kursi'
-        ]
+        suggestedActions: assistantMode === 'knowledge-only' 
+          ? undefined 
+          : [
+              '💳 Check Balances',
+              '💸 Transfer 1.5M UZS to Akmal',
+              '💱 Exchange Rates'
+            ]
       };
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
       console.error('Chat error:', err);
-      const fallback = generateClientSideAnswer(query, buildKnowledgeContext());
-      setMessages(prev => [
-        ...prev,
-        {
-          id: `msg-err-${Date.now()}`,
-          sender: 'assistant',
-          text: fallback,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]);
+      // Automatically escalate to support on unhandled failures
+      handleEscalateToSupport(query, 'Unhandled system error in AI inference engine');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // When a transfer completes in the widget
+  // When a transfer completes in the widget - deduct from chosen account
   const handleCompleteTransfer = (payload: TransferPayload) => {
-    // Deduct amount from selected account
     setAccounts(prev => prev.map(acc => {
-      if (acc.id === payload.fromAccount || (payload.currency === 'USD' && acc.currency === 'USD') || (payload.currency === 'UZS' && acc.id === 'ACC-UZS-01')) {
+      if (acc.id === payload.fromAccount) {
         return {
           ...acc,
           balance: Math.max(0, acc.balance - payload.amount)
@@ -353,11 +629,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       return acc;
     }));
 
-    // Add to transactions list
+    const senderAcc = accounts.find(a => a.id === payload.fromAccount);
+    const accLabel = senderAcc ? `${senderAcc.name} (${senderAcc.cardMask || senderAcc.accountNumber.slice(-6)})` : 'Primary Checking';
+
     const newTxn: BankTransaction = {
       id: payload.receiptId || `TXN-${Date.now().toString().slice(-4)}`,
       date: new Date().toISOString().replace('T', ' ').slice(0, 16),
-      account: payload.fromAccount || 'ACC-UZS-01 (Checking)',
+      account: accLabel,
       merchant: payload.toBeneficiary,
       category: 'Transfer',
       amount: payload.amount,
@@ -375,38 +653,46 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const handleExecuteExchange = (usdAmount: number, uzsAmount: number, direction: 'BUY' | 'SELL') => {
     setAccounts(prev => prev.map(acc => {
       if (direction === 'BUY') {
-        // Giving USD, getting UZS
-        if (acc.currency === 'USD') return { ...acc, balance: Math.max(0, acc.balance - usdAmount) };
-        if (acc.currency === 'UZS' && acc.id === 'ACC-UZS-01') return { ...acc, balance: acc.balance + uzsAmount };
+        if (acc.currency === 'UZS' && acc.id === 'ACC-UZS-01') {
+          return { ...acc, balance: Math.max(0, acc.balance - uzsAmount) };
+        }
+        if (acc.currency === 'USD' && acc.id === 'ACC-USD-01') {
+          return { ...acc, balance: acc.balance + usdAmount };
+        }
       } else {
-        // Giving UZS, getting USD
-        if (acc.currency === 'UZS' && acc.id === 'ACC-UZS-01') return { ...acc, balance: Math.max(0, acc.balance - uzsAmount) };
-        if (acc.currency === 'USD') return { ...acc, balance: acc.balance + usdAmount };
+        if (acc.currency === 'USD' && acc.id === 'ACC-USD-01') {
+          return { ...acc, balance: Math.max(0, acc.balance - usdAmount) };
+        }
+        if (acc.currency === 'UZS' && acc.id === 'ACC-UZS-01') {
+          return { ...acc, balance: acc.balance + uzsAmount };
+        }
       }
       return acc;
     }));
-  };
-
-  const handleSpeak = (id: string, text: string) => {
-    if ('speechSynthesis' in window) {
-      if (speakingId === id) {
-        window.speechSynthesis.cancel();
-        setSpeakingId(null);
-        return;
-      }
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.onend = () => setSpeakingId(null);
-      utterance.onerror = () => setSpeakingId(null);
-      setSpeakingId(id);
-      window.speechSynthesis.speak(utterance);
-    }
   };
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleSpeak = (id: string, text: string) => {
+    if (speakingId === id) {
+      window.speechSynthesis.cancel();
+      setSpeakingId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[•*#_`]/g, '').trim();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'en-US';
+    utterance.rate = 1.0;
+    utterance.onend = () => setSpeakingId(null);
+    utterance.onerror = () => setSpeakingId(null);
+    setSpeakingId(id);
+    window.speechSynthesis.speak(utterance);
   };
 
   const totalUzs = accounts.reduce((acc, curr) => {
@@ -416,100 +702,222 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   }, 0);
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-6">
-      {/* Header Banner with Live Stats */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-4 sm:p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1.5">
+    <div className="p-4 sm:p-8 space-y-5 max-w-7xl mx-auto">
+      {/* Top Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm border border-slate-800">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
             <span className="text-[10px] sm:text-xs font-semibold tracking-wider uppercase text-indigo-300">
-              KDB Mega-Chat Conversational Banking
+              KDB Conversational Banking Copilot
             </span>
           </div>
           <h1 className="text-lg sm:text-xl font-bold">KDB Bank Uzbekistan AI-CX Assistant</h1>
           <p className="text-xs text-slate-300 max-w-xl">
-            Chatda to'g'ridan-to'g'ri balansni ko'rish, AML/Compliance xavfsizlik tekshiruvi va tezkor tranzaksiyalarni amalga oshiring.
+            Live balance snapshots with historical comparison, AML compliance screening, instant transfers, and direct human staff escalation.
           </p>
         </div>
 
-        {/* Live Balance Summary Chips */}
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-xl text-xs border border-white/10">
-            <span className="text-[10px] text-slate-300 block">Jami Aktivlar (UZS)</span>
+            <span className="text-[10px] text-slate-300 block">Total Assets (UZS Eq.)</span>
             <span className="font-bold text-emerald-400 font-mono text-sm">
               {formatCurrency(totalUzs, 'UZS')}
             </span>
           </div>
+
           <div className="bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-xl text-xs border border-white/10 hidden sm:block">
-            <span className="text-[10px] text-slate-300 block">USD Hisob</span>
+            <span className="text-[10px] text-slate-300 block">USD MasterCard</span>
             <span className="font-bold text-white font-mono text-sm">
               ${accounts.find(a => a.currency === 'USD')?.balance.toLocaleString() || '3,850'}
             </span>
           </div>
-          <div className="bg-white/10 backdrop-blur-md px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 border border-white/10 text-emerald-300 font-medium">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>AML Clean</span>
+        </div>
+      </div>
+
+      {/* 3 ASSISTANT MODES MENU */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-xs">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 px-1">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <Bot className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                  Assistant Operation Mode
+                </span>
+                <span className="text-[10px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full">
+                  Menu Selection
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-400 block">
+                {assistantMode === 'knowledge-only' && '1. Knowledge-Only AI: Strict RAG advisory from trained bank files only • Pure chat'}
+                {assistantMode === 'copilot' && '2. Full Copilot: Conversational AI with in-chat interactive widgets & balance snapshots'}
+                {assistantMode === 'security-native' && '3. Security Modal: Zero-AI direct core banking dialogs • Client-side isolated clearing'}
+              </span>
+            </div>
+          </div>
+
+          {/* 3-Mode Segmented Menu Bar */}
+          <div className="inline-flex p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 gap-1 overflow-x-auto no-scrollbar">
+            {/* Mode 1 */}
+            <button
+              onClick={() => setAssistantMode('knowledge-only')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                assistantMode === 'knowledge-only'
+                  ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/80'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span>1. Knowledge-Only</span>
+              <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">
+                Pure Chat
+              </span>
+            </button>
+
+            {/* Mode 2 */}
+            <button
+              onClick={() => setAssistantMode('copilot')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                assistantMode === 'copilot'
+                  ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/80'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>2. Full Copilot</span>
+              <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                Widgets
+              </span>
+            </button>
+
+            {/* Mode 3 */}
+            <button
+              onClick={() => setAssistantMode('security-native')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                assistantMode === 'security-native'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <ShieldCheck className={`w-3.5 h-3.5 shrink-0 ${assistantMode === 'security-native' ? 'text-white' : 'text-emerald-600'}`} />
+              <span>3. Security Modal</span>
+              <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded ${
+                assistantMode === 'security-native' ? 'bg-emerald-700 text-white' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              }`}>
+                Zero-AI
+              </span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Preset Category Quick Action Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <button
-          onClick={() => handleSendMessage("Mening hisob balansimni ko'rsat")}
-          className="bg-white border border-slate-200/90 hover:border-indigo-500 rounded-xl p-3 text-left transition-all hover:shadow-xs group cursor-pointer"
-        >
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
-            <Wallet className="w-4 h-4" />
-          </div>
-          <p className="text-xs font-bold text-slate-800">Balansni Ko'rish</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">UZS, USD & Humo</p>
-        </button>
+      {/* Preset Category Quick Action Bar (Hidden in Knowledge-Only Mode) */}
+      {assistantMode !== 'knowledge-only' && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <button
+            onClick={() => {
+              if (assistantMode === 'security-native') {
+                openSecurityModal('balance');
+              } else {
+                handleSendMessage("Show my account balances");
+              }
+            }}
+            className="bg-white border border-slate-200/90 hover:border-indigo-500 rounded-xl p-3 text-left transition-all hover:shadow-xs group cursor-pointer"
+          >
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+              <Wallet className="w-4 h-4" />
+            </div>
+            <p className="text-xs font-bold text-slate-800">Check Balances</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {assistantMode === 'security-native' ? 'Direct Balance Modal' : 'UZS, USD & Snapshot'}
+            </p>
+          </button>
 
-        <button
-          onClick={() => handleSendMessage("Akmal Karimovga 1 500 000 so'm o'tkaz")}
-          className="bg-white border border-slate-200/90 hover:border-indigo-500 rounded-xl p-3 text-left transition-all hover:shadow-xs group cursor-pointer"
-        >
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
-            <ArrowUpRight className="w-4 h-4" />
-          </div>
-          <p className="text-xs font-bold text-slate-800">Pul O'tkazish</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">1.5M so'm Akmalga</p>
-        </button>
+          <button
+            onClick={() => {
+              if (assistantMode === 'security-native') {
+                openSecurityModal('transfer', {
+                  amount: 1500000,
+                  currency: 'UZS',
+                  toBeneficiary: 'Akmal Karimov',
+                  toCardOrAccount: '8600 4912 3018 7741'
+                });
+              } else {
+                handleSendMessage("Transfer 1,500,000 UZS to Akmal Karimov");
+              }
+            }}
+            className="bg-white border border-slate-200/90 hover:border-indigo-500 rounded-xl p-3 text-left transition-all hover:shadow-xs group cursor-pointer"
+          >
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+              <CreditCard className="w-4 h-4" />
+            </div>
+            <p className="text-xs font-bold text-slate-800">Send Money</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {assistantMode === 'security-native' ? 'Direct Transfer Modal' : '1.5M UZS to Akmal'}
+            </p>
+          </button>
 
-        <button
-          onClick={() => handleSendMessage("Apex Logistics kompaniyasini compliancedan tekshir")}
-          className="bg-white border border-slate-200/90 hover:border-indigo-500 rounded-xl p-3 text-left transition-all hover:shadow-xs group cursor-pointer"
-        >
-          <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
-            <ShieldCheck className="w-4 h-4" />
-          </div>
-          <p className="text-xs font-bold text-slate-800">Compliance & AML</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Sanksiya & Xavf tahlili</p>
-        </button>
+          <button
+            onClick={() => {
+              if (assistantMode === 'security-native') {
+                openSecurityModal('compliance', undefined, 'Apex Logistics LLC');
+              } else {
+                handleSendMessage("Check AML compliance for Apex Logistics");
+              }
+            }}
+            className="bg-white border border-slate-200/90 hover:border-indigo-500 rounded-xl p-3 text-left transition-all hover:shadow-xs group cursor-pointer"
+          >
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <p className="text-xs font-bold text-slate-800">AML & Compliance</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {assistantMode === 'security-native' ? 'Direct AML Modal' : 'Sanctions & Risk'}
+            </p>
+          </button>
 
-        <button
-          onClick={() => handleSendMessage("100$ ni so'mga ayirboshlash kursi qancha?")}
-          className="bg-white border border-slate-200/90 hover:border-indigo-500 rounded-xl p-3 text-left transition-all hover:shadow-xs group cursor-pointer"
-        >
-          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
-            <ArrowRightLeft className="w-4 h-4" />
-          </div>
-          <p className="text-xs font-bold text-slate-800">Valyuta Kursi</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">1 USD = {EXCHANGE_RATES.USD_UZS_BUY.toLocaleString()} UZS</p>
-        </button>
+          <button
+            onClick={() => {
+              if (assistantMode === 'security-native') {
+                openSecurityModal('exchange');
+              } else {
+                handleSendMessage("What is the exchange rate for $100 to UZS?");
+              }
+            }}
+            className="bg-white border border-slate-200/90 hover:border-indigo-500 rounded-xl p-3 text-left transition-all hover:shadow-xs group cursor-pointer"
+          >
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+              <ArrowRightLeft className="w-4 h-4" />
+            </div>
+            <p className="text-xs font-bold text-slate-800">Exchange Rates</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {assistantMode === 'security-native' ? 'Direct FX Modal' : `1 USD = ${EXCHANGE_RATES.USD_UZS_BUY.toLocaleString()} UZS`}
+            </p>
+          </button>
 
-        <button
-          onClick={() => handleSendMessage("Oxirgi to'lovlar va tranzaksiyalarim tarixini ko'rsat")}
-          className="bg-white border border-slate-200/90 hover:border-indigo-500 rounded-xl p-3 text-left transition-all hover:shadow-xs group cursor-pointer col-span-2 sm:col-span-1"
-        >
-          <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
-            <History className="w-4 h-4" />
-          </div>
-          <p className="text-xs font-bold text-slate-800">To'lovlar Tarixi</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Kvitansiyalar & Cheklar</p>
-        </button>
-      </div>
+          <button
+            onClick={() => {
+              if (assistantMode === 'security-native') {
+                openSecurityModal('support');
+              } else {
+                handleEscalateToSupport(undefined, 'Customer initiated manual staff escalation button');
+              }
+            }}
+            className="bg-white border border-rose-200 hover:border-rose-400 rounded-xl p-3 text-left transition-all hover:shadow-xs group cursor-pointer col-span-2 sm:col-span-1"
+          >
+            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+              <Headphones className="w-4 h-4" />
+            </div>
+            <p className="text-xs font-bold text-rose-800">Staff Support</p>
+            <p className="text-[10px] text-rose-500 mt-0.5">
+              {assistantMode === 'security-native' ? 'Direct Ticket Modal' : 'Human Desk'}
+            </p>
+          </button>
+        </div>
+      )}
 
       {/* Main Chat Box */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs flex flex-col h-[560px]">
@@ -547,12 +955,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                   {/* Render Embedded Interactive Widgets */}
                   {msg.widget === 'balance' && (
                     <BalanceWidget 
-                      accounts={accounts} 
+                      data={msg.widgetData}
+                      currentAccounts={accounts}
                       onSelectTransfer={(acc) => {
-                        handleSendMessage(`${acc.name} hisobidan pul o'tkazish`);
+                        handleSendMessage(`Transfer money from ${acc.name}`);
                       }}
                       onRefresh={() => {
-                        handleSendMessage("Balansimni ko'rsat");
+                        handleSendMessage("Show my account balances");
                       }}
                     />
                   )}
@@ -563,7 +972,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                       accounts={accounts}
                       onCompleteTransfer={handleCompleteTransfer}
                       onCancel={() => {
-                        handleSendMessage("O'tkazma bekor qilindi");
+                        handleSendMessage("Transfer cancelled");
                       }}
                     />
                   )}
@@ -572,7 +981,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                     <ComplianceWidget
                       data={msg.widgetData}
                       onProceedTransfer={(comp) => {
-                        handleSendMessage(`${comp.beneficiary}ga 1 500 000 so'm o'tkaz`);
+                        handleSendMessage(`Transfer 1,500,000 UZS to ${comp.beneficiary}`);
                       }}
                     />
                   )}
@@ -606,10 +1015,20 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
+                      {/* Escalate to Human Support Action */}
+                      <button
+                        onClick={() => handleEscalateToSupport(msg.text, 'Escalated from message action menu')}
+                        title="Escalate issue to KDB Staff Support"
+                        className="text-[11px] font-medium text-slate-400 hover:text-rose-600 px-1.5 py-0.5 rounded hover:bg-rose-50 transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        <Headphones className="w-3 h-3" />
+                        <span className="hidden sm:inline">Escalate to Staff</span>
+                      </button>
+
                       <button
                         onClick={() => handleSpeak(msg.id, msg.text)}
-                        title="Ovozli eshitish"
+                        title="Listen to audio"
                         className="p-1 text-slate-400 hover:text-indigo-600 rounded-md hover:bg-slate-100 transition-colors"
                       >
                         {speakingId === msg.id ? (
@@ -621,7 +1040,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
                       <button
                         onClick={() => handleCopy(msg.id, msg.text)}
-                        title="Matnni nusxalash"
+                        title="Copy text"
                         className="p-1 text-slate-400 hover:text-indigo-600 rounded-md hover:bg-slate-100 transition-colors"
                       >
                         {copiedId === msg.id ? (
@@ -634,13 +1053,22 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                   </div>
                 )}
 
-                {/* Suggested Actions chips */}
-                {msg.suggestedActions && (
+                {/* Suggested Actions chips (Hidden in Knowledge-Only Mode) */}
+                {msg.suggestedActions && assistantMode !== 'knowledge-only' && (
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {msg.suggestedActions.map((action, i) => (
                       <button
                         key={i}
-                        onClick={() => handleSendMessage(action)}
+                        onClick={() => {
+                          if (action.includes('Switch to Full Copilot')) {
+                            setAssistantMode('copilot');
+                          } else if (action.includes('Switch to Security Sandbox') || action.includes('Open Security Sandbox')) {
+                            setAssistantMode('security-native');
+                            setIsNativeModalOpen(true);
+                          } else {
+                            handleSendMessage(action);
+                          }
+                        }}
                         className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-full font-medium transition-colors cursor-pointer"
                       >
                         {action}
@@ -659,7 +1087,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-slate-500 flex items-center gap-2">
                 <RotateCw className="w-4 h-4 text-indigo-600 animate-spin" />
-                <span>KDB AI bank kliring va tahlil tizimi javob tayyorlamoqda...</span>
+                <span>KDB AI core clearing & intelligence engine is processing your request...</span>
               </div>
             </div>
           )}
@@ -679,7 +1107,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="Masalan: 'Balansimni ko'rsat', 'Akmalga 1.5M so'm o'tkaz', 'Valyuta kursi'..."
+              placeholder={
+                assistantMode === 'knowledge-only'
+                  ? "Ask anything from trained documents, credit terms, tariffs..."
+                  : assistantMode === 'security-native'
+                  ? "Type transfer, balance, or FX request (opens isolated security modal)..."
+                  : "e.g., 'Check balance', 'Transfer 1.5M UZS to Akmal', 'Exchange $100 to UZS'..."
+              }
               className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
             />
             <button
@@ -687,12 +1121,37 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               disabled={!inputText.trim() || isLoading}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-medium text-xs sm:text-sm transition-all duration-150 flex items-center gap-2 shadow-xs disabled:opacity-50 cursor-pointer"
             >
-              <span>Yuborish</span>
+              <span>Send</span>
               <Send className="w-4 h-4" />
             </button>
           </form>
         </div>
       </div>
+
+      {/* Native Security Sandbox Modal (Mode 3) */}
+      <NativeBankingModal
+        isOpen={isNativeModalOpen}
+        onClose={() => setIsNativeModalOpen(false)}
+        initialTab={nativeModalTab}
+        prefilledTransfer={prefilledTransfer}
+        prefilledComplianceBeneficiary={prefilledComplianceBeneficiary}
+        accounts={accounts}
+        setAccounts={setAccounts}
+        onCompleteTransfer={handleCompleteTransfer}
+        onSubmitSupportTicket={(newTicket) => {
+          if (setTickets) {
+            setTickets(prev => [newTicket, ...prev]);
+          }
+          const ticketMsg: ChatMessage = {
+            id: `msg-sup-${Date.now()}`,
+            sender: 'assistant',
+            text: `📋 **Staff Support Ticket Registered (#${newTicket.id})**\n\nSubject: **${newTicket.subject}**\nPriority: **${newTicket.priority}**\n\nYour inquiry has been submitted directly to authorized KDB bank staff. You can view updates in the **Staff Support Desk** tab.`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sources: ['KDB Encrypted Support Gateway']
+          };
+          setMessages(prev => [...prev, ticketMsg]);
+        }}
+      />
     </div>
   );
 };

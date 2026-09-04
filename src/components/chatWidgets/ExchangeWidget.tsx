@@ -47,8 +47,8 @@ export const ExchangeWidget: React.FC<ExchangeWidgetProps> = ({
             <ArrowLeftRight className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-xs sm:text-sm font-bold text-slate-900">KDB Valyuta Konvertatsiyasi</h4>
-            <p className="text-[10px] text-slate-400">Markaziy Bank va KDB joriy kursi</p>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900">KDB Currency Exchange</h4>
+            <p className="text-[10px] text-slate-400">Official Central Bank & KDB live rate</p>
           </div>
         </div>
 
@@ -63,9 +63,9 @@ export const ExchangeWidget: React.FC<ExchangeWidgetProps> = ({
           <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-6 h-6" />
           </div>
-          <h4 className="text-sm font-bold text-emerald-950">Valyuta Ayirboshlandi!</h4>
+          <h4 className="text-sm font-bold text-emerald-950">Currency Exchange Completed!</h4>
           <p className="text-xs text-emerald-800">
-            Hisoblaringiz balansi darhol yangilandi.
+            Your account balances have been updated in real-time.
           </p>
         </div>
       ) : (
@@ -75,7 +75,7 @@ export const ExchangeWidget: React.FC<ExchangeWidgetProps> = ({
             {/* Input Box */}
             <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1">
               <label className="text-[10px] font-bold uppercase text-slate-400">
-                {direction === 'USD_TO_UZS' ? 'Siz berasiz (USD)' : 'Siz berasiz (UZS)'}
+                {direction === 'USD_TO_UZS' ? 'You Pay (USD)' : 'You Pay (UZS)'}
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -93,7 +93,7 @@ export const ExchangeWidget: React.FC<ExchangeWidgetProps> = ({
             {/* Output Box */}
             <div className="p-3 rounded-xl border border-slate-200 bg-indigo-50/40 space-y-1">
               <label className="text-[10px] font-bold uppercase text-indigo-600">
-                {direction === 'USD_TO_UZS' ? 'Siz olasiz (UZS)' : 'Siz olasiz (USD)'}
+                {direction === 'USD_TO_UZS' ? 'You Receive (UZS)' : 'You Receive (USD)'}
               </label>
               <div className="text-sm sm:text-base font-black text-indigo-950 py-1.5">
                 {direction === 'USD_TO_UZS' 
@@ -111,11 +111,11 @@ export const ExchangeWidget: React.FC<ExchangeWidgetProps> = ({
               className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
             >
               <ArrowLeftRight className="w-3.5 h-3.5" />
-              <span>Yo'nalishni o'zgartirish</span>
+              <span>Switch Direction</span>
             </button>
 
             <span className="text-[10px] text-slate-400">
-              Komissiya: 0%
+              Fee: 0% Free
             </span>
           </div>
 
@@ -126,7 +126,7 @@ export const ExchangeWidget: React.FC<ExchangeWidgetProps> = ({
             disabled={amount <= 0}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
-            <span>Ayirboshlashni Tasdiqlash</span>
+            <span>Execute Currency Exchange</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -134,3 +134,4 @@ export const ExchangeWidget: React.FC<ExchangeWidgetProps> = ({
     </div>
   );
 };
+

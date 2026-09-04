@@ -141,6 +141,10 @@ export default function App() {
               knowledgeItems={knowledgeItems} 
               transactions={transactions}
               setTransactions={setTransactions}
+              tickets={tickets}
+              setTickets={setTickets}
+              currentUser={currentUser}
+              onNavigateToTab={setActiveTab}
             />
           </div>
 

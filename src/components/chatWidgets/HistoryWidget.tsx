@@ -19,13 +19,13 @@ export const HistoryWidget: React.FC<HistoryWidgetProps> = ({ transactions }) =>
             <History className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-xs sm:text-sm font-bold text-slate-900">KDB So'nggi Tranzaksiyalar</h4>
-            <p className="text-[10px] text-slate-400">Oxirgi amalga oshirilgan to'lov va tushumlar</p>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900">Recent Bank Transactions</h4>
+            <p className="text-[10px] text-slate-400">Latest debits, credits, and interbank transfers</p>
           </div>
         </div>
 
         <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
-          {transactions.length} ta tranzaksiya
+          {transactions.length} transactions
         </span>
       </div>
 
@@ -59,7 +59,7 @@ export const HistoryWidget: React.FC<HistoryWidgetProps> = ({ transactions }) =>
                 {txn.type === 'Credit' ? '+' : '-'}{formatCurrency(txn.amount, 'UZS')}
               </p>
               <div className="flex items-center justify-end gap-1 text-[9px] font-bold text-slate-500 mt-0.5">
-                <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Risk: {txn.riskScore}/100</span>
               </div>
             </div>
@@ -69,3 +69,4 @@ export const HistoryWidget: React.FC<HistoryWidgetProps> = ({ transactions }) =>
     </div>
   );
 };
+

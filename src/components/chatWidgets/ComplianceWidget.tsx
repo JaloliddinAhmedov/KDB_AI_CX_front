@@ -24,8 +24,8 @@ export const ComplianceWidget: React.FC<ComplianceWidgetProps> = ({
             <ShieldCheck className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-xs sm:text-sm font-bold text-slate-900">KDB Bank Compliance & AML Tekshiruvi</h4>
-            <p className="text-[10px] text-slate-400">Xalqaro sanksiya va xavfsizlik filtri</p>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900">KDB Bank Compliance & AML Screening</h4>
+            <p className="text-[10px] text-slate-400">International sanctions and automated security screening</p>
           </div>
         </div>
 
@@ -35,18 +35,18 @@ export const ComplianceWidget: React.FC<ComplianceWidgetProps> = ({
             : 'bg-amber-50 text-amber-700 border-amber-200'
         }`}>
           {isSafe ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-          {isSafe ? 'Ma\'qullangan (Passed)' : 'Qo\'shimcha Ko\'rik'}
+          {isSafe ? 'Passed (Approved)' : 'Manual Review'}
         </span>
       </div>
 
       {/* Risk Gauge Bar */}
       <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 space-y-2">
         <div className="flex justify-between items-center text-xs">
-          <span className="font-bold text-slate-700">Risk Baholash Ko'rsatkichi:</span>
+          <span className="font-bold text-slate-700">Risk Assessment Index:</span>
           <span className={`font-black text-xs sm:text-sm ${
             isSafe ? 'text-emerald-600' : 'text-amber-600'
           }`}>
-            {data.riskScore}/100 ({isSafe ? 'PAST XAVF' : 'O\'RTA XAVF'})
+            {data.riskScore}/100 ({isSafe ? 'LOW RISK' : 'MODERATE RISK'})
           </span>
         </div>
 
@@ -68,7 +68,7 @@ export const ComplianceWidget: React.FC<ComplianceWidgetProps> = ({
       {/* Grid of 4 Checks */}
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="p-2.5 rounded-xl border border-slate-200/80 bg-slate-50/50">
-          <span className="text-[10px] font-bold text-slate-400 block">OFAC & BMT Sanksiyalari</span>
+          <span className="text-[10px] font-bold text-slate-400 block">OFAC & UN Sanctions</span>
           <span className="font-bold text-emerald-700 flex items-center gap-1 mt-0.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
             {data.sanctionCheck}
@@ -84,7 +84,7 @@ export const ComplianceWidget: React.FC<ComplianceWidgetProps> = ({
         </div>
 
         <div className="p-2.5 rounded-xl border border-slate-200/80 bg-slate-50/50">
-          <span className="text-[10px] font-bold text-slate-400 block">KYC Identifikatsiya</span>
+          <span className="text-[10px] font-bold text-slate-400 block">KYC Verification</span>
           <span className="font-bold text-slate-800 flex items-center gap-1 mt-0.5">
             <Lock className="w-3.5 h-3.5 text-indigo-600" />
             {data.kycLevel} Level
@@ -92,7 +92,7 @@ export const ComplianceWidget: React.FC<ComplianceWidgetProps> = ({
         </div>
 
         <div className="p-2.5 rounded-xl border border-slate-200/80 bg-slate-50/50">
-          <span className="text-[10px] font-bold text-slate-400 block">Kunlik Limit</span>
+          <span className="text-[10px] font-bold text-slate-400 block">Daily Limit Status</span>
           <span className="font-bold text-emerald-700 flex items-center gap-1 mt-0.5">
             <Scale className="w-3.5 h-3.5 text-emerald-600" />
             {data.limitStatus}
@@ -102,7 +102,7 @@ export const ComplianceWidget: React.FC<ComplianceWidgetProps> = ({
 
       {/* Notes */}
       <div className="space-y-1 bg-slate-50 border border-slate-200/60 rounded-xl p-3 text-[11px] text-slate-600">
-        <p className="font-bold text-slate-800 text-xs mb-1">Xavfsizlik protokollari xulosasi:</p>
+        <p className="font-bold text-slate-800 text-xs mb-1">Security protocols summary:</p>
         {data.notes.map((note, idx) => (
           <div key={idx} className="flex items-start gap-1.5">
             <span className="text-emerald-600 font-bold">•</span>
@@ -119,7 +119,7 @@ export const ComplianceWidget: React.FC<ComplianceWidgetProps> = ({
             onClick={() => onProceedTransfer(data)}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
           >
-            <span>Ushbu benefisiarga pul o'tkazishni boshlash</span>
+            <span>Proceed to Transfer to this Beneficiary</span>
             <CheckCircle2 className="w-4 h-4" />
           </button>
         </div>
@@ -127,3 +127,4 @@ export const ComplianceWidget: React.FC<ComplianceWidgetProps> = ({
     </div>
   );
 };
+

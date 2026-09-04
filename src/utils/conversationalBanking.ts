@@ -3,7 +3,7 @@ import { BankAccount, BankTransaction, ComplianceCheckData, TransferPayload, Sav
 export const INITIAL_USER_ACCOUNTS: BankAccount[] = [
   {
     id: 'ACC-UZS-01',
-    name: 'UZS Asosiy Jamg\'arma Hisobi',
+    name: 'UZS Primary Checking (KDB)',
     accountNumber: '20208000900123456001',
     balance: 48750000,
     currency: 'UZS',
@@ -13,7 +13,7 @@ export const INITIAL_USER_ACCOUNTS: BankAccount[] = [
   },
   {
     id: 'ACC-USD-02',
-    name: 'USD Xalqaro MasterCard (KDB)',
+    name: 'USD International MasterCard (KDB)',
     accountNumber: '20206840300987654002',
     balance: 3850,
     currency: 'USD',
@@ -23,7 +23,7 @@ export const INITIAL_USER_ACCOUNTS: BankAccount[] = [
   },
   {
     id: 'ACC-CORP-03',
-    name: 'KDB Biznes & Korporativ Hisob',
+    name: 'KDB Corporate & Business Account',
     accountNumber: '20208000500876543003',
     balance: 142600000,
     currency: 'UZS',
@@ -33,7 +33,7 @@ export const INITIAL_USER_ACCOUNTS: BankAccount[] = [
   },
   {
     id: 'ACC-HUMO-04',
-    name: 'Humo To\'lov Kartasi',
+    name: 'Humo Payment Card',
     accountNumber: '20208000100456789004',
     balance: 6400000,
     currency: 'UZS',
@@ -49,45 +49,45 @@ export const INITIAL_SAVED_BENEFICIARIES: SavedBeneficiary[] = [
     name: 'Akmal Karimov',
     cardOrAccount: '8600 4912 3018 7741',
     type: 'Uzcard',
-    bankName: 'KDB Bank / Milliy Kliring',
+    bankName: 'KDB Bank / National Clearing',
     avatarColor: 'bg-indigo-600',
-    lastUsed: 'Bugun, 08:30'
+    lastUsed: 'Today, 08:30'
   },
   {
     id: 'ben-2',
-    name: 'Apex Logistics MChJ',
+    name: 'Apex Logistics LLC',
     cardOrAccount: '20208000700443322001',
     type: 'Account',
-    bankName: 'KDB Bank Korporativ Filiali',
+    bankName: 'KDB Bank Corporate Branch',
     avatarColor: 'bg-slate-700',
-    lastUsed: 'Kecha, 16:45'
+    lastUsed: 'Yesterday, 16:45'
   },
   {
     id: 'ben-3',
     name: 'Dilshod Alimov',
     cardOrAccount: '9860 1204 8832 9901',
     type: 'Humo',
-    bankName: 'Humo To\'lov Tizimi',
+    bankName: 'Humo Payment System',
     avatarColor: 'bg-amber-600',
-    lastUsed: '28 Avgust'
+    lastUsed: 'Aug 28'
   },
   {
     id: 'ben-4',
     name: 'Elena Smirnova',
     cardOrAccount: '5440 2209 1145 3388',
     type: 'MasterCard',
-    bankName: 'KDB Bank Xalqaro',
+    bankName: 'KDB Bank International',
     avatarColor: 'bg-emerald-600',
-    lastUsed: '25 Avgust'
+    lastUsed: 'Aug 25'
   },
   {
     id: 'ben-5',
-    name: 'Shaxnoza Rahimova',
+    name: 'Shakhnoza Rahimova',
     cardOrAccount: '8600 5501 9920 1432',
     type: 'Uzcard',
-    bankName: 'Milliy Bank (NBU)',
+    bankName: 'National Bank of Uzbekistan (NBU)',
     avatarColor: 'bg-purple-600',
-    lastUsed: '20 Avgust'
+    lastUsed: 'Aug 20'
   }
 ];
 
@@ -126,9 +126,9 @@ export function saveBeneficiary(newBen: Omit<SavedBeneficiary, 'id'> & { id?: st
     name: newBen.name.trim(),
     cardOrAccount: formatCardOrAccount(newBen.cardOrAccount),
     type: newBen.type || detectCardOrAccountType(newBen.cardOrAccount),
-    bankName: newBen.bankName || (newBen.cardOrAccount.startsWith('20208') ? 'KDB Bank Hisob' : 'Milliy To\'lov Shlyuzi'),
+    bankName: newBen.bankName || (newBen.cardOrAccount.startsWith('20208') ? 'KDB Bank Account' : 'National Payment Gateway'),
     avatarColor: (existingIndex >= 0 && current[existingIndex].avatarColor) ? current[existingIndex].avatarColor : randomColor,
-    lastUsed: 'Hozirgina'
+    lastUsed: 'Just now'
   };
 
   let updated: SavedBeneficiary[];
@@ -192,7 +192,7 @@ export function formatCurrency(amount: number, currency: string = 'UZS'): string
   if (currency === 'EUR') {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount);
   }
-  return new Intl.NumberFormat('uz-UZ').format(amount) + ' UZS';
+  return new Intl.NumberFormat('en-US').format(amount) + ' UZS';
 }
 
 export function parseBankingIntent(userMessage: string): {
@@ -204,8 +204,12 @@ export function parseBankingIntent(userMessage: string): {
 
   // 1. Balance Intent
   if (
-    lower.includes('balans') ||
     lower.includes('balance') ||
+    lower.includes('balans') ||
+    lower.includes('my account') ||
+    lower.includes('my balance') ||
+    lower.includes('check balance') ||
+    lower.includes('show balance') ||
     lower.includes('hisobim') ||
     lower.includes('kartam') ||
     lower.includes('pulim qancha') ||
@@ -213,20 +217,24 @@ export function parseBankingIntent(userMessage: string): {
     lower.includes('hisob holati') ||
     lower.includes('mablag') ||
     lower === '1' ||
-    lower === 'balansni tekshirish'
+    lower === 'balansni tekshirish' ||
+    lower === 'check my balances'
   ) {
     return { intent: 'balance' };
   }
 
   // 2. Exchange Intent
   if (
+    lower.includes('exchange') ||
+    lower.includes('convert') ||
+    lower.includes('rate') ||
+    lower.includes('fx') ||
     lower.includes('kurs') ||
     lower.includes('valyuta') ||
     lower.includes('ayirboshla') ||
     lower.includes('almashtir') ||
-    lower.includes('exchange') ||
-    lower.includes('convert') ||
-    lower.includes('dollar kursi')
+    lower.includes('dollar kursi') ||
+    lower.includes('usd rate')
   ) {
     // Check if amount is specified
     const numMatch = text.match(/(\d[\d\s,.]*)\s*(\$|usd|dollar|so'm|som|uzs|evro|eur)?/i);
@@ -240,12 +248,15 @@ export function parseBankingIntent(userMessage: string): {
 
   // 3. History Intent
   if (
-    lower.includes('tarix') ||
     lower.includes('history') ||
+    lower.includes('transaction') ||
+    lower.includes('statement') ||
+    lower.includes('recent') ||
+    lower.includes('past payment') ||
+    lower.includes('tarix') ||
     lower.includes('oxirgi to\'lov') ||
     lower.includes('oxirgi tolov') ||
     lower.includes('so\'nggi tranzaksiya') ||
-    lower.includes('statement') ||
     lower.includes('cheklar')
   ) {
     return { intent: 'history' };
@@ -253,12 +264,12 @@ export function parseBankingIntent(userMessage: string): {
 
   // 4. Compliance Check Intent
   if (
-    (lower.includes('compliance') || lower.includes('aml') || lower.includes('tekshir') || lower.includes('sanction') || lower.includes('xavf')) &&
-    !lower.includes('o\'tkaz') && !lower.includes('otkaz') && !lower.includes('send') && !lower.includes('transfer')
+    (lower.includes('compliance') || lower.includes('aml') || lower.includes('sanction') || lower.includes('screen') || lower.includes('risk check') || lower.includes('tekshir') || lower.includes('xavf')) &&
+    !lower.includes('o\'tkaz') && !lower.includes('otkaz') && !lower.includes('send') && !lower.includes('transfer') && !lower.includes('pay')
   ) {
-    // Extract beneficiary if given e.g. "Apex Logistics ni compliancedan tekshir"
+    // Extract beneficiary if given e.g. "Run compliance check on Apex Logistics"
     let beneficiary = 'Akmal Karimov';
-    const match = text.match(/(?:tekshir|haqida|uchun|kor(?:ish)?)\s*[:]?\s*([A-Za-z0-9\s'ʻ`]+)/i) ||
+    const match = text.match(/(?:on|for|check|screening|about|haqida|uchun)\s*[:]?\s*([A-Za-z0-9\s'ʻ`]+)/i) ||
                   text.match(/([A-Za-z0-9\s'ʻ`]+?)\s*(?:ni|ning|ga)?\s*(?:compliance|aml|tekshir)/i);
     if (match && match[1] && match[1].trim().length > 2) {
       beneficiary = match[1].trim();
@@ -269,23 +280,24 @@ export function parseBankingIntent(userMessage: string): {
     };
   }
 
-  // 5. Transfer Intent (Natural Language regex)
+  // 5. Transfer Intent (Natural Language regex in English & Uzbek)
   const isTransferWord = 
+    lower.includes('transfer') ||
+    lower.includes('send') ||
+    lower.includes('pay') ||
+    lower.includes('wire') ||
+    lower.includes('remit') ||
     lower.includes('o\'tkaz') ||
     lower.includes('otkaz') ||
     lower.includes('o‘tkaz') ||
-    lower.includes('transfer') ||
-    lower.includes('send') ||
     lower.includes('tashla') ||
     lower.includes('yubor') ||
     lower.includes('to\'la') ||
     lower.includes('tola') ||
-    lower.includes('pay') ||
-    lower.includes('o\'tkazish') ||
     lower.includes('pul o\'tkaz');
 
   if (isTransferWord) {
-    // Try to extract amount: e.g. "1 500 000 so'm", "1500000", "$500", "500$"
+    // Try to extract amount: e.g. "1 500 000 uzs", "$500", "500$", "1500000", "50 USD"
     let amount = 1500000;
     let currency: 'UZS' | 'USD' = 'UZS';
 
@@ -311,7 +323,7 @@ export function parseBankingIntent(userMessage: string): {
       }
     }
 
-    // Extract potential card or account number: 16 digits (e.g. 8600 1234 5678 9012) or 20 digits
+    // Extract potential card or account number: 16 digits or 20 digits
     const cardMatch = text.match(/(?:8600|9860|5\d{3}|4\d{3})\s*(?:\d{4}\s*){3}/) || 
                       text.match(/\b(\d{16})\b/) ||
                       text.match(/\b(20208\d{15})\b/);
@@ -333,11 +345,11 @@ export function parseBankingIntent(userMessage: string): {
     let beneficiary = matchedBen ? matchedBen.name : 'Akmal Karimov';
     if (!matchedBen) {
       const nameMatch = 
-        text.match(/(?:to|ga|uchun|karta)\s*([A-Za-z0-9\s'ʻ`]+?)(?:\s*(?:ga|ga|nomiga|\d|$|\.))/i) ||
+        text.match(/(?:to|for|beneficiary|receiver|ga|uchun|karta)\s*([A-Za-z0-9\s'ʻ`]+?)(?:\s*(?:ga|nomiga|\d|$|\.))/i) ||
         text.match(/^([A-Za-z\s'ʻ`]+?)\s*(?:ga|uchun)\s*/i);
 
       if (nameMatch && nameMatch[1] && nameMatch[1].trim().length > 2) {
-        const cleanName = nameMatch[1].trim().replace(/\b(so'm|som|uzs|dollar|usd|transfer|otkaz|o'tkaz|karta|kartasiga|hisobiga|to'la|tola)\b/gi, '').trim();
+        const cleanName = nameMatch[1].trim().replace(/\b(so'm|som|uzs|dollar|usd|transfer|otkaz|o'tkaz|karta|kartasiga|hisobiga|to'la|tola|send|pay|to)\b/gi, '').trim();
         if (cleanName.length > 2) {
           beneficiary = cleanName;
         }
@@ -359,7 +371,7 @@ export function parseBankingIntent(userMessage: string): {
       toCardOrAccount: cardOrAccount,
       amount,
       currency,
-      purpose: `${beneficiary} hisobiga tezkor to'lov`,
+      purpose: `Direct transfer to ${beneficiary}`,
       commission: 0,
       status: 'Draft',
       compliance
@@ -402,3 +414,4 @@ export function runComplianceCheck(beneficiary: string, amount: number, currency
     ]
   };
 }
+
